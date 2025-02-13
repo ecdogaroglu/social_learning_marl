@@ -1,0 +1,23 @@
+# Code directories
+code/archive/
+code/bandits/
+code/multi\ agent\ implementation/
+
+# Literature
+literature/
+
+# Paper files
+paper/archive/
+paper/paper_copy.text
+
+# Common Python files
+__pycache__/
+*.py[cod]
+*.so
+.env
+venv/
+
+# Common system files
+.DS_Store
+.vscode/
+.idea/
