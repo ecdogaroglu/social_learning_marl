@@ -1,6 +1,6 @@
 \subsection*{Social Learning in Networks}
 
-We adapt the model in Brandl (2024). Specifically, we let $N = \{1, \ldots, n\}$ be the set of agents, and $T = \{1, 2, \ldots, t \}$ be the finite set of periods. In each period, each agent chooses an action $a$ from the same finite set of actions $A$. The finite set of states of the world is $\Omega$, where the true state $\omega \in \Omega$ is a random variable with full support distribution over $\Omega$. Agents share the same utility function $u : A \times \Omega \to \mathbb{R}$ that depends on their own action and the state of the world, where $a_\theta$ denotes the unique optimal (correct) action in that state. It's also assumed that $a_\theta \neq a_{\theta'}$ for any two distinct states $\theta, \theta' \in \Omega$. In each period $t \in T$, each agent $i$ privately observes a signal $s_t^i$ from a set of signals $S$. Conditional on each state $\theta$, $s_t^i$ has distribution $\mu_\theta \in \Delta(S)$, and signals are independent across agents and periods. Observing the signal realization $s \in S$ changes the log-likelihood ratio of the observing agent between the states $\theta$ and $\theta'$ by,
+We adapt the model in \cite{brandl2024}. Specifically, we let $N = \{1, \ldots, n\}$ be the set of agents, and $T = \{1, 2, \ldots, t \}$ be the finite set of periods. In each period, each agent chooses an action $a$ from the same finite set of actions $A$. The finite set of states of the world is $\Omega$, where the true state $\omega \in \Omega$ is a random variable with full support distribution over $\Omega$. Agents share the same utility function $u : A \times \Omega \to \mathbb{R}$ that depends on their own action and the state of the world, where $a_\theta$ denotes the unique optimal (correct) action in that state. It's also assumed that $a_\theta \neq a_{\theta'}$ for any two distinct states $\theta, \theta' \in \Omega$. In each period $t \in T$, each agent $i$ privately observes a signal $s_t^i$ from a set of signals $S$. Conditional on each state $\theta$, $s_t^i$ has distribution $\mu_\theta \in \Delta(S)$, and signals are independent across agents and periods. Observing the signal realization $s \in S$ changes the log-likelihood ratio of the observing agent between the states $\theta$ and $\theta'$ by,
 \[
 \ell_{\theta, \theta'}(s) = \log \frac{d\mu_\theta(s)}{d\mu_{\theta'}(s)}.
 \]
@@ -183,7 +183,7 @@ and the critic network update,
 
 \subsection*{Single Agent Implementation}
 
-To validate our approach, we first implement a single-agent version of the learning framework. This simplified setting allows us to verify the learning dynamics and compare them against the theoretical bounds established in Brandl (2024). The implementation follows the binary state case ($|\Omega| = 2$) with symmetric signals of accuracy $q > 0.5$.
+To validate our approach, we first implement a single-agent version of the learning framework. This simplified setting allows us to verify the learning dynamics and compare them against the theoretical bounds established in \cite{brandl2024}. The implementation follows the binary state case ($|\Omega| = 2$) with symmetric signals of accuracy $q > 0.5$.
 
 \subsubsection*{Metrics Tracking}
 We track two key metrics throughout the learning process:
@@ -235,7 +235,48 @@ The critic network estimates state values using the same GRU architecture:
 
 \subsubsection*{Training Process}
 The agent is trained using a variant of the Advantage Actor-Critic (A2C) algorithm. The complete training procedure is detailed in Algorithm \ref{alg:single-agent-training}.
-   
+
+\begin{algorithm}[H]
+\caption{Single Agent Social Learning Training}
+\label{alg:single-agent-training}
+    \begin{algorithmic}[1]
+    \Require Number of steps $T$, signal accuracy $q$, discount factor $\gamma$
+    \Require Actor learning rate $\alpha$, critic learning rate $\beta$
+    \State Initialize actor network $\pi_{\phi}$ with parameters $\phi$
+    \State Initialize critic network $Q_{\xi}$ with parameters $\xi$
+    \State Initialize environment with signal accuracy $q$
+    \State Sample true state $\omega \sim \text{Uniform}\{0,1\}$
+    \State Initialize metrics tracker $\mathcal{M}$
+    \State Get initial signal $s_0$
+    \State Initialize hidden states $h_0 = \mathbf{0}$
+    \For{$t = 1$ to $T$}
+        \State \textit{// Actor forward pass with GRU}
+        \State $z_t = \text{sigmoid}(W_z[h_{t-1}, s_{t-1}] + b_z)$
+        \State $\rho_t = \text{sigmoid}(W_\rho[h_{t-1}, s_{t-1}] + b_\rho)$
+        \State $\tilde{h}_t = \tanh(W_h[\rho_t \odot h_{t-1}, s_{t-1}] + b_h)$
+        \State $h_t = (1-z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t$
+        \State $\pi_{\phi}(h_t) = \text{softmax}(W_{\pi}h_t + b_{\pi})$
+        \State Sample action $a_t \sim \pi_{\phi}(\cdot|h_t)$
+        \State $s_t, r_t, \text{is\_mistake} = \text{step}(a_t)$ \Comment{Environment step}
+        \State \textit{// Critic forward pass}
+        \State $Q_{\xi}(s_{t-1}, h_{t-1}) = W_Q[s_{t-1}, h_{t-1}] + b_Q$
+        \State $Q_{\xi}(s_t, h_t) = W_Q[s_t, h_t] + b_Q$
+        \State $A_t = r_t + \gamma Q_{\xi}(s_t, h_t) - Q_{\xi}(s_{t-1}, h_{t-1})$
+        \State $\mathcal{L}(\phi) = -\log \pi_{\phi}(a_t|h_t) A_t$ \Comment{Policy loss}
+        \State $\mathcal{L}(\xi) = (r_t + \gamma Q_{\xi}(s_t, h_t) - Q_{\xi}(s_{t-1}, h_{t-1}))^2$ \Comment{Value loss}
+        \State \textit{// Backward propagation}
+        \State $\phi \leftarrow \phi + \alpha \nabla_{\phi} \mathcal{L}(\phi)$ \Comment{Update actor}
+        \State $\xi \leftarrow \xi - \beta \nabla_{\xi} \mathcal{L}(\xi)$ \Comment{Update critic}
+        \State $\mathcal{M}.\text{add\_mistake}(\text{is\_mistake})$
+        \State $\mathcal{M}.\text{update\_metrics}()$
+        \If{$t \bmod 1000 = 0$}
+            \State Print current mistake rate and learning rate
+        \EndIf
+    \EndFor
+    \State \Return trained networks $\pi_{\phi}$, $Q_{\xi}$ and metrics $\mathcal{M}$
+    \end{algorithmic}
+\end{algorithm}
+
 The algorithm implements the A2C training loop, processing signals through GRU-based actor and critic networks while tracking learning metrics. The actor network learns a policy that minimizes mistakes in predicting the true state, while the critic network estimates state values to compute advantages for policy updates.
 
 \subsubsection*{Theoretical Bounds}
@@ -246,9 +287,11 @@ For the binary case with symmetric signals, the theoretical bound on the learnin
 where $q_{bdd} = 2q-1$ is the bound on the probability of choosing the correct action. This provides a benchmark against which we can evaluate the empirical learning rate of our implementation.
 
 \subsubsection*{Empirical Results}
-The implementation is evaluated over multiple training runs with different random seeds. For each run, we track:
-\begin{itemize}
-    \item The evolution of the mistake rate over time
-    \item The empirical learning rate compared to the theoretical bound
-    \item The convergence of the policy to the optimal action
-\end{itemize}
+The implementation is evaluated over a single continuos training run for a signal accuray of $q=0.75$ and $T=10^5$ steps. We track the evolution of the mistake rate and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:learning-curves}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\textwidth]{../charts/single_agent_learning_curves.png}
+    \caption{Learning curves for single agent}
+    \label{fig:learning-curves}
+\end{figure}

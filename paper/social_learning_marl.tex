@@ -2,10 +2,7 @@
 
 %% Language and font encodings
 \usepackage[english]{babel}
-\usepackage[utf8x]{inputenc}
-
-\usepackage{booktabs}
-\usepackage{tabu}
+\usepackage[utf8]{inputenc}  % Changed from utf8x to utf8
 \usepackage[T1]{fontenc}
 
 %% Sets page size and margins
@@ -13,33 +10,40 @@
 
 %% Useful packages
 \usepackage{amsmath}
-\usepackage{graphicx}
-%\usepackage{apacite}
-\usepackage[colorinlistoftodos]{todonotes}
-\usepackage[colorlinks=true, allcolors=blue]{hyperref}
-\usepackage[natbibapa]{apacite}
 \usepackage{amssymb}
-\usepackage{multirow,array}
-\usepackage{subfigure}
-\usepackage{amsthm}
-\usepackage{amsmath}    % For equations and alignment
-\usepackage{bm}         % For bold symbols (e.g., \bm{\mu})
-\usepackage{amssymb}    % For mathematical symbols (e.g., \mathbb, \delta)
-\usepackage[ruled,vlined,linesnumbered,algosection]{algorithm2e}
-
+\usepackage{bm}         % For bold symbols
+\usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tabu}
 \usepackage{enumitem}
 \usepackage[table]{xcolor}
 \usepackage{array}
 \usepackage{multirow}
-
-
-
-\usepackage{inputenc}
+\usepackage{subfigure}
+\usepackage{amsthm}
 \usepackage{media9}
 
-\DeclareMathOperator*{\argmax}{arg\,max} % thin space, limits underneath in displays
+% Choose either algorithm2e OR algorithmicx, not both
+% Option 1: algorithm2e
+%\usepackage[ruled,vlined,linesnumbered,algosection]{algorithm2e}
+%\SetAlgoLongEnd
+%\SetAlgoNoEnd
+%\SetAlgoNoLine
+%\LinesNumbered
 
+% Option 2: algorithmicx (recommended for your current algorithm)
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+% Bibliography
+\usepackage[natbibapa]{apacite}
+
+% Todo notes
+\usepackage[colorinlistoftodos]{todonotes}
+
+% Hyperref should be last
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
 % Allow floating content to be placed more liberally
 \renewcommand{\floatpagefraction}{.9}
@@ -47,11 +51,14 @@
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{.9}
 
+% Math operators
+\DeclareMathOperator*{\argmax}{arg\,max}
 
+% Theorems
 \newtheorem{theorem}{Theorem}
 
 \title{Social Learning via Multi Agent Deep Reinforcement Learning}
-\author{Ege Can Doğaroğlu \\ 3464688}
+\author{Ege Can Doğaroğlu}
 \date{}
 
 \begin{document}
