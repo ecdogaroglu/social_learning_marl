@@ -7,12 +7,11 @@ This repository implements a deep reinforcement learning approach to social lear
 The model considers agents who must learn the true state of the world through:
 - Private signals received in each period
 - Observations of other agents' actions
-- A reward function that provides feedback on their decisions
+- Unobservable rewards
 
 Key theoretical aspects:
 - Agents receive signals with accuracy q > 0.5
 - The true state ω remains fixed throughout the learning process
-- Learning rate is measured by: r = liminf -1/t * log Prob(mistake)
 - There exists a theoretical upper bound (r_bdd) on the learning rate
 
 ## Implementation Details
@@ -20,7 +19,7 @@ Key theoretical aspects:
 ### Environment
 - Binary state space (ω ∈ {0,1})
 - Signal accuracy parameter q (default: 0.75)
-- Reward function v(a,s) = (q·1{a=s} - (1-q)·1{a≠s})/(2q-1)
+- Rewards as a function of signal and action
 
 ### Neural Architecture
 The implementation uses two main components:
@@ -66,7 +65,7 @@ plot_metrics(metrics, signal_accuracy=0.75)
 ### MetricsTracker
 Tracks and computes various performance metrics including:
 - Mistake rates over time
-- Learning rates as defined in the paper
+- Empirical learning rate approximations
 - Maintains full history of mistakes
 
 ### Environment
@@ -87,13 +86,3 @@ The implementation includes plotting functionality that shows:
 1. Empirical mistake rate over time
 2. Empirical learning rate compared to theoretical bound
 3. Visualization of the learning process
-
-## Theoretical Bounds
-
-For the binary case with signal accuracy q, the theoretical bound on the learning rate is:
-```
-r_bdd = -log(1 - (2q - 1))
-```
-
-This bound represents the fundamental limit on how quickly any agent can learn the true state, regardless of their strategy.
-
