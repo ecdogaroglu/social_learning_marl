@@ -9,6 +9,14 @@ literature/
 # Paper files
 paper/archive/
 paper/paper_copy.text
+paper/social_learning_marl.aux
+paper/social_learning_marl.bbl
+paper/social_learning_marl.blg
+paper/social_learning_marl.fdb_latexmk
+paper/social_learning_marl.fls
+paper/social_learning_marl.log
+paper/social_learning_marl.out
+paper/social_learning_marl.synctex.gz
 
 # Common Python files
 __pycache__/
