@@ -12,7 +12,7 @@ The model considers agents who must learn the true state of the world through:
 Key theoretical aspects:
 - Agents receive signals with accuracy q > 0.5
 - The true state ω remains fixed throughout the learning process
-- Learning rate is measured by: r = liminf -1/t * log P(aᵗ ≠ aω)
+- Learning rate is measured by: r = liminf -1/t * log P(mistake)
 - There exists a theoretical upper bound (r_bdd) on the learning rate
 
 ## Implementation Details
