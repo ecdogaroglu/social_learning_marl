@@ -41,7 +41,7 @@ def plot_metrics(metrics_tracker: MetricsTracker, signal_accuracy: float = 0.75)
     plt.tight_layout()
     
     # Save with high DPI for publication quality
-    plt.savefig('/Users/ege/Documents/Thesis/charts/single_agent_learning_curves.png', dpi=300, bbox_inches='tight')
+    plt.savefig('.../charts/single_agent_learning_curves.png', dpi=300, bbox_inches='tight')
     plt.show()
 
 def train(num_steps: int = 100000, signal_accuracy: float = 0.75):
