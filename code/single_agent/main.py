@@ -6,6 +6,16 @@ import math
 from metrics import MetricsTracker
 from environment import Environment
 from agent import Agent
+from pathlib import Path
+
+# Current script path
+current_path = Path(__file__).resolve()
+
+# Move to the parent directory and specify the new folder
+save_folder = current_path.parent.parent.parent / "charts"
+save_folder.mkdir(exist_ok=True)  # Create folder if it doesn't exist
+
+from ..multi_agent.metrics import plot_multi_agent_metrics
 
 def plot_metrics(metrics_tracker: MetricsTracker, signal_accuracy: float = 0.75):
     """Plot learning curves with theoretical bound in academic black and white style."""
@@ -41,7 +51,7 @@ def plot_metrics(metrics_tracker: MetricsTracker, signal_accuracy: float = 0.75)
     plt.tight_layout()
     
     # Save with high DPI for publication quality
-    plt.savefig('.../charts/single_agent_learning_curves.png', dpi=300, bbox_inches='tight')
+    plt.savefig(save_folder/f'single_agent_learning_curves_q={signal_accuracy}.png', dpi=300, bbox_inches='tight')
     plt.show()
 
 def train(num_steps: int = 100000, signal_accuracy: float = 0.75):

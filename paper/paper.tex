@@ -140,72 +140,16 @@ where $\mathcal{H} \subset \mathbb{R}^d$ is the space of hidden states. The tran
 \end{equation*}
 where $\tilde{\psi}_t = (\omega, (s^i_t)_{i \in N}, \mathbf{a}_t, (h^i_t)_{i \in N})$. This gated architecture allows each agent to maintain a compact yet informative representation of their observation history, enabling them to learn sophisticated social learning strategies while keeping the state space tractable.
 
-\subsection*{Centralized Training with Decentralized Execution}
-We adopt a CTDE paradigm where each agent maintains a decentralized actor network $\pi^i_{\phi_i}$ for action execution, while training utilizes a centralized critic network $Q_{\xi}$ that has access to the global state. This approach preserves the decentralized nature of action execution while leveraging additional information during training, which mimics the role of a \textit{social planner.}
 
-\subsubsection*{Decentralized Actor Network}
-The decentralized actor network for agent $i$ maps the hidden state to a policy distribution as before,
-\[
-    \pi^i_{\phi_i}(a^i_t|h^i_t) = \text{softmax}(W^i_{\pi}h^i_t + b^i_{\pi}).
-\]
-Then, we use the policy gradient update to optimize this network given as,
-\[
-    \nabla_{\phi_i} J(\phi_i) = \mathbb{E}\left[\nabla_{\phi_i} \log \pi^i_{\phi_i}(a^i_t|h^i_t) A^i(\tilde{\psi}_t)\right]
-\]
-where $A^i(\tilde{\psi}_t)$ is the advantage function computed using the centralized critic.
-
-\subsubsection*{Centralized Critic Network}
-
-The centralized critic takes as input the global state $\psi_t$ and all agents' hidden states:
-\[
-    Q_{\xi}(\psi_t, \mathbf{h}_t) = W_Q[\psi_t, \mathbf{h}_t, \mathbf{a}_t] + b_Q
-\]
-where $\mathbf{h}_t = (h^1_t, \ldots, h^n_t)$. The critic network is updated to minimize the \textit{temporal difference} error with the loss function,
-\[
-    \mathcal{L}(\xi) = \mathbb{E}\left[(r_t + \gamma Q_{\xi}(\tilde{\psi}_{t+1}) - Q_{\xi}(\tilde{\psi}_t))^2\right].
-\]
-The advantage function for each agent is computed as,
-\[
-    A^i(\tilde{\psi}_t) = Q_{\xi}(\tilde{\psi}_t) - V_{\xi}(\tilde{\psi}_t),
-\]
-where $V_{\xi}(\tilde{\psi}_t) = \mathbb{E}_{\mathbf{a}_t \sim \boldsymbol{\pi}}[Q_{\xi}(\tilde{\psi}_t]$ is the value function.
-
-
-\subsubsection*{Learning Algorithm}
-The complete learning process alternates between the actor network update,
-\[
-    \phi_i \leftarrow \phi_i + \alpha \nabla_{\phi_i} J(\phi_i),
-\]
-and the critic network update,
-\[
-    \xi \leftarrow \xi - \beta \nabla_{\xi} \mathcal{L}(\xi).
-\]
-
-\subsection*{Single Agent Implementation}
+\subsection*{Single Agent Learning}
 
 To validate our approach, we first implement a single-agent version of the learning framework. This simplified setting allows us to verify the learning dynamics and compare them against the theoretical bounds established in \cite{brandl2024}. The implementation follows the binary state case ($|\Omega| = 2$) with symmetric signals of accuracy $q > 0.5$.
-
-\subsubsection*{Metrics Tracking}
-We track two key metrics throughout the learning process:
-
-\begin{itemize}
-    \item \textit{Mistake Rate}: The empirical probability of the agent choosing an incorrect action, computed as the running average of mistakes:
-    \[
-        P(a_t \neq a_\omega) = \frac{1}{t}\sum_{s=1}^t \mathbf{1}_{\{a_s \neq a_\omega\}}
-    \]
-    
-    \item \textit{Learning Rate}: Following the paper's definition, we compute:
-    \[
-        r = \liminf_{t \to \infty} -\frac{1}{t} \log P(a_t \neq a_\omega)
-    \]
-    To approximate this limit, we compute the learning rate over exponentially increasing time windows and take the minimum rate, ensuring we capture the asymptotic behavior.
-\end{itemize}
 
 \subsubsection*{Environment}
 The environment implements the binary state case with the following components:
 
 \begin{itemize}
-    \item A fixed true state $\omega \in \{0,1\}$ drawn uniformly at random at initialization
+    \item Without loss of generality, we fix the true state to be $\omega = 0$ hence the optimal action is $a_\omega = 0$.
     \item Signal generation with accuracy $q$:
     \[
         P(s_t = \omega) = q, \quad P(s_t \neq \omega) = 1-q
@@ -222,14 +166,14 @@ The agent employs an actor-critic architecture with both networks using GRU cell
 \paragraph{Actor Network}
 The actor network maps the signal history to a policy over actions:
 \begin{align*}
-    h_t &= \text{GRU}(s_t, h_{t-1}) \\
+    h_t &= f_{\eta}(s_t, h_{t-1}) \\
     \pi(a_t|h_t) &= \text{softmax}(W_\pi h_t + b_\pi)
 \end{align*}
 
 \paragraph{Critic Network}
 The critic network estimates state values using the same GRU architecture:
 \begin{align*}
-    h_t &= \text{GRU}(s_t, h_{t-1}) \\
+    h_t &= f_{\eta}(s_t, h_{t-1}) \\
     V(h_t) &= W_v h_t + b_v
 \end{align*}
 
@@ -279,19 +223,149 @@ The agent is trained using a variant of the Advantage Actor-Critic (A2C) algorit
 
 The algorithm implements the A2C training loop, processing signals through GRU-based actor and critic networks while tracking learning metrics. The actor network learns a policy that minimizes mistakes in predicting the true state, while the critic network estimates state values to compute advantages for policy updates.
 
-\subsubsection*{Theoretical Bounds}
+\subsubsection*{Metrics Tracking}
+We track three key metrics throughout the learning process:
+
+\begin{itemize}
+    \item \textit{Policy}: The proportion of the wrong action in agent's policy, computed as:
+    \[
+        P(a_t \neq a_\omega) = \frac{1}{t}\sum_{s=1}^t \mathbf{1}_{\{a_s \neq a_\omega\}}
+    \]
+
+    \item \textit{Mistake Rate}: The empirical probability of the agent choosing an incorrect action, computed as the running average of mistakes:
+    \[
+        P(a_t \neq a_\omega) = \frac{1}{t}\sum_{s=1}^t \mathbf{1}_{\{a_s \neq a_\omega\}}
+    \]
+    
+    \item \textit{Learning Rate}: Following the paper's definition, we compute:
+    \[
+        r = \liminf_{t \to \infty} -\frac{1}{t} \log P(a_t \neq a_\omega)
+    \]
+    To approximate this limit, we compute the learning rate over exponentially increasing time windows and take the minimum rate, ensuring we capture the asymptotic behavior.
+\end{itemize}
 For the binary case with symmetric signals, the theoretical bound on the learning rate is:
 \[
     r_{bdd} = -\log(1-q_{bdd}) = -\log(1-(2q-1))
 \]
 where $q_{bdd} = 2q-1$ is the bound on the probability of choosing the correct action. This provides a benchmark against which we can evaluate the empirical learning rate of our implementation.
 
-\subsubsection*{Empirical Results}
-The implementation is evaluated over a single continuos training run for a signal accuray of $q=0.75$ and $T=10^5$ steps. We track the evolution of the mistake rate and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:learning-curves}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
+\subsubsection*{Experimental Setup}
+The implementation is evaluated over a single continuos training run for a signal accuray of $q=0.75$ and $T=10^5$ steps. We track the evolution of the mistake rate, policies and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:single-learning-curves}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=1\textwidth]{../charts/single_agent_learning_curves.png}
+    \includegraphics[width=1\textwidth]{../charts/single_agent_learning_curves_q=0.75.png}
     \caption{Learning curves for single agent}
-    \label{fig:learning-curves}
+    \label{fig:single-learning-curves}
 \end{figure}
+
+\subsection*{Multi-Agent Learning}
+
+We extend our single-agent learning to a multi-agent setting using two different training paradigms: Centralized Training with Decentralized Execution (CTDE) and fully Decentralized Training with Decentralized Execution (DTDE). Both approaches maintain the core RNN architecture for processing observation histories while differing in their training mechanisms and information sharing structures. There are several aspects where they differ from the single-agent case. First, the GRU networks process not only individual signals but also the complete action profile. Second, we need to maintain individual networks to allow for decentralization. Finally, the learning dynamics in the multi-agent setting are influenced by the strategic interactions between agents, leading to non-stationarity in the environment.
+
+\subsubsection*{Centralized Training with Decentralized Execution (CTDE)}
+
+The CTDE approach employs a centralized critic during the training phase while maintaining decentralized actors for execution. This architecture enables information sharing during learning while preserving the decentralized nature of the deployed policies. The centralized critic has access to the global state and all agents' information during training, allowing it to better estimate the value of joint actions, while each agent's policy remains independent during execution.
+
+\paragraph{Architecture Components}
+\begin{itemize}
+    \item \textit{Decentralized Actor Networks}: Each agent $i \in N$ maintains an independent actor network that maps their hidden state to a policy over actions:
+    \[
+        \pi^i_{\phi_i}(a^i_t|h^i_t) = \text{softmax}(W^i_{\pi}h^i_t + b^i_{\pi})
+    \]
+    where $\phi_i$ are the actor network parameters, $h^i_t$ is the agent's hidden state, and $W^i_{\pi}, b^i_{\pi}$ are the policy network weights and biases.
+    
+    \item \textit{Centralized Critic Network}: A single critic network processes the augmented state which includes the true state, signals, actions, and hidden states of all agents:
+    \begin{align*}
+        Q_{\xi}(\tilde{\psi}_t) &= W_Q f_Q(\tilde{\psi}_t, \mathbf{h}_t) + b_Q \\
+        \mathbf{h}_t &= (h^1_t, \ldots, h^n_t)
+    \end{align*}
+    where $\xi$ are the critic network parameters, $\tilde{\psi}_t = (\omega, (s^i_t)_{i \in N}, \mathbf{a}_t, \mathbf{h}_t)$ is the augmented state, and $f_Q$ is a neural network that processes the joint input.
+\end{itemize}
+
+\paragraph{Training Process}
+The CTDE training process operates by alternating between the following updates:
+
+\begin{enumerate}
+    \item \textit{Centralized Critic Update}: The critic is trained to minimize the temporal difference error across all agents:
+    \[
+        \mathcal{L}(\xi) = \mathbb{E}\left[(r_t + \gamma Q_{\xi}(\tilde{\psi}_{t+1}) - Q_{\xi}(\tilde{\psi}_t))^2\right]
+    \]
+    where $r_t$ is the immediate reward, and $\gamma$ is the discount factor.
+    
+    \item \textit{Decentralized Actor Updates}: Each actor network is updated using the policy gradient theorem with advantages computed by the centralized critic:
+    \[
+        \nabla_{\phi_i} J(\phi_i) = \mathbb{E}\left[\nabla_{\phi_i} \log \pi^i_{\phi_i}(a^i_t|h^i_t) A^i(\tilde{\psi}_t)\right]
+    \]
+    The advantage function $A^i(\tilde{\psi}_t)$ for each agent is computed as:
+    \[
+        A^i(\tilde{\psi}_t) = Q_{\xi}(\tilde{\psi}_t) - V_{\xi}(\tilde{\psi}_t)
+    \]
+    where the value function $V_{\xi}$ is computed by taking expectation over all agents' actions:
+    \[
+        V_{\xi}(\tilde{\psi}_t) = \mathbb{E}_{\mathbf{a}_t \sim \prod_{i \in N}\pi^i_{\phi_i}}[Q_{\xi}(\tilde{\psi}_t)]
+    \]
+\end{enumerate}
+
+This training scheme allows each agent to benefit from global information during learning while maintaining the ability to act based solely on local observations during execution, analogous to a social planner. The centralized critic helps address the non-stationarity problem in multi-agent learning by incorporating the policies of all agents into its value estimation, while the decentralized actors ensure that the final policies remain executable with only local information.
+
+\subsubsection*{Decentralized Training with Decentralized Execution (DTDE)}
+
+The DTDE approach implements complete decentralization during both training and execution phases. Each agent learns independently using only their local observations and individual reward signals, without access to a centralized critic or global state information. This fully decentralized architecture ensures that agents can learn and operate autonomously, making it particularly suitable for settings where centralized training is impractical or undesirable.
+
+\paragraph{Architecture Components}
+\begin{itemize}
+    \item \textit{Independent Actor-Critic Pairs}: Each agent $i \in N$ maintains both an actor network for policy learning and a critic network for value estimation:
+    \begin{align*}
+        \pi^i_{\phi_i}(a^i_t|h^i_t) &= \text{softmax}(W^i_{\pi}h^i_t + b^i_{\pi}) \\
+        V^i_{\xi_i}(h^i_t) &= W^i_v f_v(h^i_t) + b^i_v
+    \end{align*}
+    where $\phi_i$ and $\xi_i$ are the actor and critic network parameters respectively, $h^i_t$ is the agent's hidden state, and $f_v$ is a neural network processing the hidden state.
+    
+    \item \textit{Local Value Estimation}: Each agent's critic estimates the expected discounted sum of future rewards based solely on their local information:
+    \[
+        V^i_{\xi_i}(h^i_t) = \mathbb{E}_{\pi^i}\left[\sum_{k=0}^{\infty} \gamma^k r_{t+k}^i \mid h^i_t\right]
+    \]
+    where $r_{t+k}^i$ represents agent $i$'s reward at time $t+k$, and the expectation is taken with respect to the agent's own policy $\pi^i$.
+\end{itemize}
+
+\paragraph{Training Process}
+Each agent $i \in N$ trains independently through the following updates:
+
+\begin{itemize}
+    \item \textit{Local Critic Updates}: The critic network parameters $\xi_i$ are updated to minimize the temporal difference error:
+    \[
+        \mathcal{L}(\xi_i) = \mathbb{E}\left[(r_t^i + \gamma V^i_{\xi_i}(h_{t+1}^i) - V^i_{\xi_i}(h_t^i))^2\right]
+    \]
+    where $r_t^i$ is the immediate reward received by agent $i$.
+    
+    \item \textit{Local Actor Updates}: The actor network parameters $\phi_i$ are updated using policy gradient with locally computed advantages:
+    \[
+        \nabla_{\phi_i} J(\phi_i) = \mathbb{E}\left[\nabla_{\phi_i} \log \pi^i_{\phi_i}(a^i_t|h^i_t) A^i(h^i_t)\right]
+    \]
+    The advantage function $A^i(h^i_t)$ is computed using the local critic's value estimates:
+    \[
+        A^i(h^i_t) = r_t^i + \gamma V^i_{\xi_i}(h_{t+1}^i) - V^i_{\xi_i}(h_t^i)
+    \]
+\end{itemize}
+
+This fully decentralized approach is beneficial for scalability and robustness, as each agent can learn independently without the need for centralized coordination. However, the lack of information sharing during training may lead to slower convergence or suboptimal coordination compared to CTDE approaches, particularly in settings where cooperative behavior is essential for optimal performance.
+
+\subsubsection*{Experimental Setup}
+The implementation is evaluated over a single continuos training run for signal accuries of $q \in \{0.1, 0.9\}$ to test the robustness of learning across informativeness of the signal for both paradigms with $T=10^5$ steps each. We track the evolution of the mistake rate, policies and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:multi-learning-curves-ctde} and \ref{fig:multi-learning-curves-dtde}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\textwidth]{../charts/multi_agent_ctde_learning_curves_q=0.75.png}
+    \caption{Learning curves for multi-agent CTDE paradigm} 
+    \label{fig:multi-learning-curves-ctde}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\textwidth]{../charts/multi_agent_dtde_learning_curves_q=0.75.png}
+    \caption{Learning curves for multi-agent DTDE paradigm} 
+    \label{fig:multi-learning-curves-dtde}
+\end{figure}
+
+\pagebreak
