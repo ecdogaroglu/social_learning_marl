@@ -178,7 +178,7 @@ The critic network estimates state values using the same GRU architecture:
 \end{align*}
 
 \subsubsection*{Training Process}
-The agent is trained using a variant of the Advantage Actor-Critic (A2C) algorithm. The complete training procedure is detailed in Algorithm \ref{alg:single-agent-training}.
+The agent is trained using a variant of the Advantage Actor-Critic algorithm. The complete training procedure is detailed in Algorithm \ref{alg:single-agent-training}.
 
 \begin{algorithm}[H]
 \caption{Single Agent Social Learning Training}
@@ -221,7 +221,7 @@ The agent is trained using a variant of the Advantage Actor-Critic (A2C) algorit
     \end{algorithmic}
 \end{algorithm}
 
-The algorithm implements the A2C training loop, processing signals through GRU-based actor and critic networks while tracking learning metrics. The actor network learns a policy that minimizes mistakes in predicting the true state, while the critic network estimates state values to compute advantages for policy updates.
+The algorithm implements the Advantage Actor Critic training loop, processing signals through GRU-based actor and critic networks while tracking learning metrics. The actor network learns a policy that minimizes mistakes in predicting the true state, while the critic network estimates state values to compute advantages for policy updates.
 
 
 \begin{figure}[htbp]
@@ -242,7 +242,7 @@ We track four key metrics throughout the learning process, computed over a slidi
         v(a,s) = \frac{q \cdot \mathbf{1}_{\{a = s\}} - (1-q) \cdot \mathbf{1}_{\{a \neq s\}}}{2q-1}
     \]
     
-    \item \textit{Proportions of True Action}: The proportion of time each agent selects the correct action in their policy, reflecting how well the agents have learned to identify the optimal action.
+    \item \textit{True Action Rates}: The proportion of how much the agent's mixed policy assings to the true action $a_\omega = 1$. This metric helps visualize the agent's learning progress.
     
     \item \textit{Learning Rates}: Approximating the paper's definition:
     \[
