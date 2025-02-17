@@ -33,7 +33,7 @@ class DecentralizedCritic(nn.Module):
 class DecentralizedAgent:
     """Complete decentralized agent combining RNN, actor, and critic."""
     def __init__(self, num_agents: int, hidden_size: int = 64,
-                 lr_actor: float = 1e-4, lr_critic: float = 1e-3):
+                 lr_actor: float = 1e-2, lr_critic: float = 1e-2):
         self.rnn = MultiAgentRNN(num_agents, hidden_size)
         self.actor = DecentralizedActor(hidden_size)
         self.critic = DecentralizedCritic(hidden_size)
@@ -57,7 +57,7 @@ class DecentralizedAgent:
             dist = Categorical(action_probs)
             action = dist.sample()
             log_prob = dist.log_prob(action)
-            true_action_rate = dist.probs[0][0].item()
+            true_action_rate = 1 - dist.probs[0][0].item()
 
         return action.item(), log_prob, true_action_rate
     
@@ -113,6 +113,7 @@ def train_dtde(num_agents: int = 4, num_steps: int = 10000,
     prev_actions = torch.zeros(1, num_agents)
     
     print(f"True state: {env.true_state}")
+
     # Training loop
     for t in range(num_steps):
         # Select actions
@@ -127,7 +128,7 @@ def train_dtde(num_agents: int = 4, num_steps: int = 10000,
             true_action_rates.append(true_action_rate)
             
         # Environment step
-        next_signals, observed_rewards, _, mistakes = env.step(actions)
+        next_signals, observed_rewards, true_rewards, mistakes = env.step(signals, actions)
         
         # Convert current actions to tensor
         current_actions_tensor = torch.tensor([actions], dtype=torch.float32)
@@ -139,7 +140,10 @@ def train_dtde(num_agents: int = 4, num_steps: int = 10000,
         
         # Update metrics
         metrics.add_mistakes(mistakes)
+        metrics.add_signals([signal.item() for signal in signals])
         metrics.add_action_rate(true_action_rates)
+        metrics.add_true_rewards(true_rewards)
+        metrics.add_observed_rewards(observed_rewards)
         metrics.update_metrics()
         
         # Update states
@@ -151,7 +155,7 @@ def train_dtde(num_agents: int = 4, num_steps: int = 10000,
             print(f"\nStep {t + 1}")
             for i in range(num_agents):
                 print(f"Agent {i+1}:")
-                print(f"  Mistake Rate: {metrics.mistake_rates[i][-1]:.3f}")
+                print(f"  True Action Rate: {metrics.action_rate_history[i][-1]:.3f}")
                 print(f"  Learning Rate: {metrics.learning_rates[i][-1]:.3f}")
             print("--------------------")
     

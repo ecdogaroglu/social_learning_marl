@@ -13,8 +13,8 @@ save_folder.mkdir(exist_ok=True)  # Create folder if it doesn't exist
 
 if __name__ == "__main__":
     # Train with metrics tracking
-    num_agents = 100
-    num_steps = 10
+    num_agents = 4
+    num_steps = 1000
     signal_accuracies = [0.75]
 
     for signal_accuracy in signal_accuracies:

@@ -52,7 +52,7 @@ class CentralizedCritic(nn.Module):
 class MultiAgentTrainer:
     """CTDE trainer for multi-agent social learning."""
     def __init__(self, num_agents: int, hidden_size: int = 64, 
-                 lr_actor: float = 1e-4, lr_critic: float = 1e-3):
+                 lr_actor: float = 1e-3, lr_critic: float = 1e-3):
         self.num_agents = num_agents
         
         # Initialize actors and critic
@@ -67,7 +67,7 @@ class MultiAgentTrainer:
         # Hidden states
         self.hidden_states = [actor.init_hidden() for actor in self.actors]
         
-        self.gamma = 0.99
+        self.gamma = 0.99 # Discount factor
     
     def select_actions(self, signals: List[torch.Tensor], 
                       prev_actions: torch.Tensor) -> Tuple[List[int], List[torch.Tensor]]:
@@ -82,7 +82,7 @@ class MultiAgentTrainer:
             action = dist.sample()
             actions.append(action.item())
             log_probs.append(dist.log_prob(action))
-            true_action_rates.append(dist.probs[0][0].item())
+            true_action_rates.append(1- dist.probs[0][0].item())
 
         return actions, log_probs, true_action_rates
     
@@ -153,11 +153,12 @@ def train_ctde(num_agents: int = 4, num_steps: int = 10000,
     print(f"True state: {env.true_state}")
     # Training loop
     for t in range(num_steps):
+
         # Select actions
         actions, log_probs, true_action_rates = trainer.select_actions(signals, prev_actions)
         
         # Environment step
-        next_signals, observed_rewards, true_rewards, mistakes = env.step(actions)
+        next_signals, observed_rewards, true_rewards, mistakes = env.step(signals, actions)
         
         # Update trainer
         trainer.update(signals, actions, log_probs, observed_rewards, true_rewards, next_signals, prev_actions)
@@ -165,6 +166,9 @@ def train_ctde(num_agents: int = 4, num_steps: int = 10000,
         # Update metrics
         metrics.add_mistakes(mistakes)
         metrics.add_action_rate(true_action_rates)
+        metrics.add_true_rewards(true_rewards)
+        metrics.add_observed_rewards(observed_rewards)
+        metrics.add_signals([signal.item() for signal in signals])
         metrics.update_metrics()
         
         # Update states
@@ -176,7 +180,7 @@ def train_ctde(num_agents: int = 4, num_steps: int = 10000,
             print(f"\nStep {t + 1}")
             for i in range(num_agents):
                 print(f"Agent {i+1}:")
-                print(f"  Mistake Rate: {metrics.mistake_rates[i][-1]:.3f}")
+                print(f"  True Action Rate: {metrics.action_rate_history[i][-1]:.3f}")
                 print(f"  Learning Rate: {metrics.learning_rates[i][-1]:.3f}")
             print("--------------------")
     

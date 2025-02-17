@@ -8,7 +8,7 @@ class MultiAgentEnvironment:
         self.num_agents = num_agents
         self.q = signal_accuracy
         #self.true_state = np.random.randint(1)
-        self.true_state = 0
+        self.true_state = 1
 
     def get_signals(self) -> List[torch.Tensor]:
         """Generate signals for all agents."""
@@ -43,8 +43,7 @@ class MultiAgentEnvironment:
         
         return observed_rewards, true_rewards
     
-    def step(self, actions: List[int]) -> Tuple[List[torch.Tensor], List[float], List[bool]]:
-        signals = self.get_signals()
+    def step(self, signals: List[int], actions: List[int]) -> Tuple[List[torch.Tensor], List[float], List[bool]]:
         observed_rewards, true_rewards = self.compute_rewards(actions,signals)
         mistakes = [action != self.true_state for action in actions]
         next_signals = self.get_signals()

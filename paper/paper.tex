@@ -149,7 +149,7 @@ To validate our approach, we first implement a single-agent version of the learn
 The environment implements the binary state case with the following components:
 
 \begin{itemize}
-    \item Without loss of generality, we fix the true state to be $\omega = 0$ hence the optimal action is $a_\omega = 0$.
+    \item Without loss of generality, we fix the true state to be $\omega = 1$ hence the optimal action is $a_\omega = 1$.
     \item Signal generation with accuracy $q$:
     \[
         P(s_t = \omega) = q, \quad P(s_t \neq \omega) = 1-q
@@ -223,34 +223,6 @@ The agent is trained using a variant of the Advantage Actor-Critic (A2C) algorit
 
 The algorithm implements the A2C training loop, processing signals through GRU-based actor and critic networks while tracking learning metrics. The actor network learns a policy that minimizes mistakes in predicting the true state, while the critic network estimates state values to compute advantages for policy updates.
 
-\subsubsection*{Metrics Tracking}
-We track three key metrics throughout the learning process:
-
-\begin{itemize}
-    \item \textit{Policy}: The proportion of the wrong action in agent's policy, computed as:
-    \[
-        P(a_t \neq a_\omega) = \frac{1}{t}\sum_{s=1}^t \mathbf{1}_{\{a_s \neq a_\omega\}}
-    \]
-
-    \item \textit{Mistake Rate}: The empirical probability of the agent choosing an incorrect action, computed as the running average of mistakes:
-    \[
-        P(a_t \neq a_\omega) = \frac{1}{t}\sum_{s=1}^t \mathbf{1}_{\{a_s \neq a_\omega\}}
-    \]
-    
-    \item \textit{Learning Rate}: Following the paper's definition, we compute:
-    \[
-        r = \liminf_{t \to \infty} -\frac{1}{t} \log P(a_t \neq a_\omega)
-    \]
-    To approximate this limit, we compute the learning rate over exponentially increasing time windows and take the minimum rate, ensuring we capture the asymptotic behavior.
-\end{itemize}
-For the binary case with symmetric signals, the theoretical bound on the learning rate is:
-\[
-    r_{bdd} = -\log(1-q_{bdd}) = -\log(1-(2q-1))
-\]
-where $q_{bdd} = 2q-1$ is the bound on the probability of choosing the correct action. This provides a benchmark against which we can evaluate the empirical learning rate of our implementation.
-
-\subsubsection*{Experimental Setup}
-The implementation is evaluated over a single continuos training run for a signal accuray of $q=0.75$ and $T=10^5$ steps. We track the evolution of the mistake rate, policies and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:single-learning-curves}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
 
 \begin{figure}[htbp]
     \centering
@@ -258,6 +230,32 @@ The implementation is evaluated over a single continuos training run for a signa
     \caption{Learning curves for single agent}
     \label{fig:single-learning-curves}
 \end{figure}
+
+\subsubsection*{Metrics Tracking}
+We track four key metrics throughout the learning process, computed over a sliding window to smooth the learning curves:
+
+\begin{itemize}
+    \item \textit{Signals}: The raw signals received by each agent, which helps visualize the information quality available to agents given the signal accuracy $q$.
+    
+    \item \textit{Observed Rewards}: The rewards observed by each agent based on the signal-dependent reward function:
+    \[
+        v(a,s) = \frac{q \cdot \mathbf{1}_{\{a = s\}} - (1-q) \cdot \mathbf{1}_{\{a \neq s\}}}{2q-1}
+    \]
+    
+    \item \textit{Proportions of True Action}: The proportion of time each agent selects the correct action in their policy, reflecting how well the agents have learned to identify the optimal action.
+    
+    \item \textit{Learning Rates}: Approximating the paper's definition:
+    \[
+        r^{empirical} =  -\frac{1}{t} \log P(a_t \neq a_\omega)
+    \]
+    This is compared against the theoretical bound for the binary case with symmetric signals:
+    \[
+        r_{bdd} = 2(2q-1)\log\frac{q}{1-q}
+    \]
+\end{itemize}
+
+The implementation is evaluated over a single continuos training run for a signal accuray of $q=0.75$ and $T=10^4$ steps. We present the results in Figure \ref{fig:single-learning-curves} with a running average of window size 1000. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation. The observed rewards start to oscillate around the true reward level of $1$ just before the 2000th step, which also coincides with the converge of the policy to the optimal action.
+
 
 \subsection*{Multi-Agent Learning}
 
@@ -309,6 +307,15 @@ The CTDE training process operates by alternating between the following updates:
 
 This training scheme allows each agent to benefit from global information during learning while maintaining the ability to act based solely on local observations during execution, analogous to a social planner. The centralized critic helps address the non-stationarity problem in multi-agent learning by incorporating the policies of all agents into its value estimation, while the decentralized actors ensure that the final policies remain executable with only local information.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\textwidth]{../charts/multi_agent_ctde_learning_curves_q=0.75.png}
+    \caption{Learning curves for multi-agent CTDE paradigm} 
+    \label{fig:multi-learning-curves-ctde}
+\end{figure}
+
+In Figure \ref{fig:multi-learning-curves-ctde}, we plot the simulation metrics as running averages of a window of 100 steps. We  observe that for a continuos trainining run with 4 agents, $T= 1000$ steps and $q=0.75$ signal accuracy, all agents successfully learn the true action and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
+
 \subsubsection*{Decentralized Training with Decentralized Execution (DTDE)}
 
 The DTDE approach implements complete decentralization during both training and execution phases. Each agent learns independently using only their local observations and individual reward signals, without access to a centralized critic or global state information. This fully decentralized architecture ensures that agents can learn and operate autonomously, making it particularly suitable for settings where centralized training is impractical or undesirable.
@@ -351,16 +358,6 @@ Each agent $i \in N$ trains independently through the following updates:
 
 This fully decentralized approach is beneficial for scalability and robustness, as each agent can learn independently without the need for centralized coordination. However, the lack of information sharing during training may lead to slower convergence or suboptimal coordination compared to CTDE approaches, particularly in settings where cooperative behavior is essential for optimal performance.
 
-\subsubsection*{Experimental Setup}
-The implementation is evaluated over a single continuos training run for signal accuries of $q \in \{0.1, 0.9\}$ to test the robustness of learning across informativeness of the signal for both paradigms with $T=10^5$ steps each. We track the evolution of the mistake rate, policies and empirical learning rate over time to compare against the theoretical bound. The results are visualized in Figure \ref{fig:multi-learning-curves-ctde} and \ref{fig:multi-learning-curves-dtde}. The learning curves demonstrate that the agent successfully learns to minimize mistakes and that the learning rate stays below the theoretical learning rate bound, validating the implementation.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=1\textwidth]{../charts/multi_agent_ctde_learning_curves_q=0.75.png}
-    \caption{Learning curves for multi-agent CTDE paradigm} 
-    \label{fig:multi-learning-curves-ctde}
-\end{figure}
-
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=1\textwidth]{../charts/multi_agent_dtde_learning_curves_q=0.75.png}
@@ -368,4 +365,5 @@ The implementation is evaluated over a single continuos training run for signal 
     \label{fig:multi-learning-curves-dtde}
 \end{figure}
 
-\pagebreak
+In Figure \ref{fig:multi-learning-curves-dtde}, we plot the simulation metrics for the DTDE approach, with the same parametrization as before. Just as with CTDE, we see an early converge to true rewards and true actions. The learning rate stays below the theoretical learning rate bound, validating the implementation. However, with both approaches, we noticed divergence from the optimal policy during longer time steps that even take place after what seemed to be a convergence to perfect learning, begging for further investigation. 
+\pagebreak 

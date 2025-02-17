@@ -1,6 +1,5 @@
-import numpy as np
+import numpy as np 
 import torch
-
 from typing import Tuple
 
 class Environment:
@@ -12,7 +11,7 @@ class Environment:
         """
         self.q = signal_accuracy
         # Draw true state once and keep it fixed throughout
-        self.true_state = np.random.randint(2)  # Fixed true state ω
+        self.true_state = 1  # Fixed true state ω
     
     def get_signal(self) -> torch.Tensor:
         """Generate signal based on current true state."""
@@ -30,17 +29,24 @@ class Environment:
         denominator = 2 * self.q - 1
         return numerator / denominator
     
-    def step(self, action: int) -> Tuple[torch.Tensor, float, bool]:
+    def compute_true_reward(self, action: int) -> float:
+        """Compute reward based on true state rather than signal."""
+        return float(action == self.true_state)
+    
+    def step(self, action: int) -> Tuple[torch.Tensor, float, float, bool, float]:
         # Get current signal
         current_signal = self.get_signal()
         
-        # Compute reward using paper's reward function
-        reward = self.compute_reward(action, current_signal.item())
+        # Compute observed reward using paper's reward function
+        observed_reward = self.compute_reward(action, current_signal.item())
         
-        # Check if action was a mistake
+        # Compute true reward
+        true_reward = self.compute_true_reward(action)
+        
+        # Check if action matches true state
         is_mistake = (action != self.true_state)
         
         # Get next signal
         next_signal = self.get_signal()
             
-        return next_signal, reward, is_mistake
+        return next_signal, observed_reward, true_reward, is_mistake, current_signal.item()
