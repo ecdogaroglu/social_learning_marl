@@ -1,0 +1,2287 @@
+Discussion Paper Series – CRC TR 224
+Discussion Paper No. 130
+Project B 04
+
+Undiscounted Bandit Games
+Godfrey Keller*
+Sven Rady**
+
+May 2020
+(First version: October 2019 )
+
+* Department of Economics, University of Oxford, Manor Road Building, Oxford OX1 3UQ, UK.
+** Department of Economics and Hausdorff Center for Mathematics, University of Bonn, Adenauerallee
+24-42, D-53113 Bonn, Germany.
+
+Funding by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation)
+through CRC TR 224 is gratefully acknowledged.
+Collaborative Research Center Transregio 224 - www.crctr224.de
+Rheinische Friedrich-Wilhelms-Universität Bonn - Universität Mannheim
+
+Undiscounted Bandit Games∗
+Godfrey Keller†
+
+Sven Rady‡
+
+May 8, 2020
+Abstract
+We analyze undiscounted continuous-time games of strategic experimentation
+with two-armed bandits. The risky arm generates payoffs according to a Lévy process with an unknown average payoff per unit of time which nature draws from
+an arbitrary finite set. Observing all actions and realized payoffs, plus a free background signal, players use Markov strategies with the common posterior belief about
+the unknown parameter as the state variable. We show that the unique symmetric Markov perfect equilibrium can be computed in a simple closed form involving
+only the payoff of the safe arm, the expected current payoff of the risky arm, and
+the expected full-information payoff, given the current belief. In particular, the
+equilibrium does not depend on the precise specification of the payoff-generating
+processes.
+Keywords: Strategic Experimentation, Bayesian Two-Armed Bandit, Strong LongRun Average Criterion, Markov Perfect Equilibrium, HJB Equation, Viscosity Solution.
+JEL Classification Numbers: C73, D83.
+
+∗
+
+We thank three anonymous referees and an advisory editor for their comments. Our thanks for
+helpful discussions and suggestions are owed to Chris Harris, Thomas Kesselheim, Alois Kneip, Albert
+N. Shiryaev, Philipp Strack, Bruno Strulovici, Bernhard von Stengel, and seminar participants in Austin,
+Budapest, Cambridge, Florence, Keele, Oxford, Paris, Shanghai, Southampton, and UCL/Birkbeck. We
+thank the Center for Economic Studies at the University of Munich and the Studienzentrum Gerzensee
+for their hospitality. Financial support from the Deutsche Forschungsgemeinschaft through GRK 801,
+SFB TR 15 (Project A08) and SFB TR 224 (Project B04) is gratefully acknowledged.
+†
+Department of Economics, University of Oxford, Manor Road Building, Oxford OX1 3UQ, UK.
+‡
+Department of Economics and Hausdorff Center for Mathematics, University of Bonn, Adenauerallee
+24-42, D-53113 Bonn, Germany.
+
+1
+
+Introduction
+
+We analyze a class of continuous-time two-armed bandit models in which a number of
+symmetric players act non-cooperatively, trying to learn an unknown state of the world
+that governs the risky arm’s expected payoff per unit of time. Actual payoffs are given
+by Lévy processes, that is, processes with independent and stationary increments. In
+addition, players receive free background information in the form of a process of the same
+type as the payoff processes. Rather than discounting future payoffs, players evaluate
+their payoff streams according to the strong long-run average criterion.1 Assuming that
+all actions and payoffs are public information, we restrict players to Markov strategies
+with the common posterior belief about the unknown parameter as the natural state
+variable, and we characterize the unique symmetric Markov perfect equilibrium.
+This setting allows us to handle a much larger class of priors and payoff-generating
+processes than the existing economics literature on bandit-based multi-agent learning in
+continuous time. First, the unknown state of the world can be drawn from an arbitrary
+finite set, whereas the literature assumes a binary state. Second, the payoff processes
+can combine continuous with discrete increments, whereas the literature assumes either
+Brownian or Poisson payoffs. Third, lump-sum payoffs can be good or bad news, whereas
+the literature assumes that news is of one type only.
+Despite this broadening of the class of payoff-generating processes, and the generalization from Bernoulli to arbitrary discrete priors in particular, the equilibrium strategy
+has a simple explicit form. In fact, at any point in time, a player’s best response depends
+only on the intensity of experimentation performed by the other players, the payoff of the
+safe arm, the expected current payoff of the risky arm, and the expected full-information
+payoff – it does not depend on the precise specification of the payoff-generating process.
+This feature carries over to the symmetric Markov perfect equilibrium, where one and the
+same functional form applies across all specifications that we consider. The common equilibrium action is a piecewise linear function of the ratio of two differences: that between
+the risky arm’s expected full-information payoff and the safe payoff, and that between
+the safe payoff and the risky arm’s expected current payoff.
+We further show that this result extends to two specifications of priors and payoffgenerating processes in which the unknown state of the world is drawn from a continuous
+distribution of unbounded support: Brownian payoffs with normal priors, and Poisson
+payoffs with gamma priors. In either specification, the players’ information is captured
+1
+
+First used by Ramsey (1928) in growth theory, this criterion is the limit of the standard discounted
+performance criterion as the discount rate goes to zero, both in terms of value functions and optimal
+strategies. See Dutta (1991) for the connection between performance criteria with and without discounting
+in discrete time, and Bolton and Harris (2000) for a detailed treatment of the strong long-run average
+criterion in a continuous-time Bayesian-learning setting such as ours.
+
+1
+
+by a two-dimensional sufficient statistic, which can serve as the state variable for Markov
+strategies.
+Our characterization of the unique symmetric Markov perfect equilibrium hinges on
+four features of the settings that we study: (i) players receive free background information;
+(ii) they use the strong long-run average criterion; (iii) the experimentation game is
+played in continuous time; and (iv) the players’ risky payoff processes and the background
+information are all of the same (unknown) type, hence perfect substitutes with respect to
+learning.
+In fact, the background information ensures that players learn the true state exponentially fast, no matter what strategy profile they use.2 This makes it possible to evaluate
+players’ random payoff streams according to the strong long-run average criterion, that
+is, by computing the expected accumulated shortfall of realized payoffs relative to the
+expected full-information payoff. Under this criterion, the problem of finding a best response to the opponents’ Markovian strategy profile has a recursive structure amenable to
+dynamic-programming techniques. In continuous time, this leads to a Hamilton-JacobiBellman (HJB) equation in which the value function (i.e. the payoff function induced by
+a best response) enters only through the expected rate of change of continuation payoffs.
+When the players’ risky payoff processes and the background information are all of the
+same type, moreover, the expected rate of change of continuation values is linear in the
+total intensity of experimentation. This makes it possible to eliminate a player’s value
+function completely from the maximization problem in the HJB equation, so optimal actions can be determined belief by belief without reference to the value function and the
+payoff-generating processes.
+While the computation of these candidate best responses does not involve the specifics
+of the payoff-generating processes, the evolution of the players’ posterior beliefs obviously
+does depend on them, and it is essential to ensure that the strategies in question induce
+a well-defined law of motion for those beliefs. Standard results on the existence and
+uniqueness of solutions to stochastic differential equations require Lipschitz continuity of
+coefficients. We restrict players to strategies that are Lipschitz continuous in the posterior
+belief, therefore, and we show that the candidate symmetric equilibrium strategy obtained
+from the HJB equation falls in this class.
+To verify that all players using this strategy constitutes an equilibrium, we exploit the
+fact that a player’s value function is the unique viscosity solution of the HJB equation
+2
+
+The assumption of free background information is quite natural in a number of situations in which
+players face trade-offs and incentives akin to those captured in the experimentation game at hand. Examples are experience goods (e.g. the choice between a familiar restaurant of known quality and a new
+restaurant of unknown quality) and innovation in research teams. Consumers have access to guides or
+online recommender systems, research teams to published patents or journal articles.
+
+2
+
+subject to the relevant boundary conditions.3 By showing that the payoff function for the
+suggested strategy profile also solves this boundary-value problem in the viscosity sense,
+we establish that the two functions agree, so the player indeed plays a best response.4
+This paper belongs to a large and still growing economics literature, surveyed by Bergemann and Välimäki (2008) and Hörner and Skrzypacz (2016), that analyzes Bayesian
+bandit problems in contexts such as search, learning, pricing, matching, contracting
+and information design. More specifically, we contribute to the literature on strategic
+experimentation with bandits, sharing its most basic setup – symmetric players solving
+identical bandit problems with a safe and a risky arm, and exerting a purely informational
+externality on each other. This literature was initiated by Bolton and Harris (1999) who
+characterize the unique symmetric Markov perfect equilibrium under discounting when
+risky payoffs are generated by Brownian motions with an unknown drift that can be either
+high or low. The equilibrium features free-riding on other players’ experimentation efforts,
+but also an encouragement effect whereby future experimentation by others increases a
+player’s current effort.
+Studying the same setting under the strong long-run average criterion, and adding
+background information, Bolton and Harris (2000) are able to characterize the entire set
+of undiscounted Markov equilibria – symmetric and asymmetric. This is possible because
+posterior beliefs in the binary Brownian model evolve as a one-dimensional diffusion,
+which allows for a space of admissible Markov strategies large enough to accommodate
+the discontinuities of actions with respect to beliefs which are an immutable feature of
+asymmetric equilibria.
+Keller, Rady and Cripps (2005) and Keller and Rady (2010, 2015) analyze symmetric
+and asymmetric Markov perfect equilibria under discounting (and without background
+information) when the payoffs are generated by Poisson processes with an unknown intensity that can be either high or low. Here, it is the piecewise deterministic evolution of
+beliefs on the unit interval that permits discontinuous strategies: the belief moves in one
+and the same direction as long as no lump-sum payoff arrives, so one-sided continuity of
+strategies suffices to induce well-defined belief dynamics.
+Our restriction to Lipschitz continuous strategies, mandated by the more general
+payoff-generating processes and priors that we consider, rules out asymmetric equilibria
+but, as our main result shows, still permits the computation of a unique symmetric equilibrium along the same lines, and of the same functional form, as in Bolton and Harris
+3
+
+For an introduction to viscosity solutions in continuous-time stochastic control with applications in
+economics and finance, see the textbooks by Øksendal and Sulem (2007, Chapter 9) and Pham (2009,
+Chapter 4).
+4
+For a recent application of the viscosity-solutions approach to the verification of optimality in a
+single-agent learning context with Brownian signals, see Ke and Villas-Boas (2019).
+
+3
+
+(2000). The strategic forces at work are also the same: free-riding on the information produced by other players and the background signal, but no encouragement effect because
+players do not discount. We bring two entirely new elements to this analysis, though: a
+proof of exponentially fast convergence of beliefs which in turn implies boundedness of
+the strong long-run average criterion, and the use of the viscosity-solutions approach in
+the verification of the best-response property.
+Relative to the above body of work, our main contribution is to show that the use of the
+strong long-run average criterion and the introduction of background information permit
+the computation of a unique symmetric Markov perfect equilibrium in a simple explicit
+form for a much broader class of payoff-generating processes and priors. In particular,
+this allows the analysis of situations in which players learn both from a Brownian payoff
+component that might capture the steady flow of information under ‘business as usual’ and
+from a jump component that might capture the sudden bursts of information – good and
+bad – arriving in exceptional times or ‘crises’.5 In our framework, nature could draw the
+characteristics of each component from separate (finite) sets, moreover, with full flexibility
+as to their joint distribution.
+A second contribution is to delineate precisely which aspects of the analysis in Bolton
+and Harris (2000) and the present paper generalize to other settings and which do not.
+In fact, each of the four features mentioned above is crucial. First, without background
+information, the strong long-run average criterion would have no power because the expected accumulated shortfall of received payoffs relative to the expected full-information
+payoff would grow infinitely large in general. Second, with discounting, the HJB equation
+would necessarily contain a term ‘discount rate times current value’ that is not multiplied
+by the total intensity of experimentation, so best responses would depend on current
+values. As pointed out in Dutta (1991), moreover, alternative undiscounted performance
+criteria would not permit a recursive representation. Third, if the model were set in discrete time, the expected rate of change of continuation payoffs would not be linear in the
+total intensity of experimentation. In a discrete-time version of the game in Keller, Rady
+and Cripps (2005), for example, the probability of a success in any given round is clearly
+non-linear in the number of players pulling the risky arm. Fourth, linearity would also
+fail if the type of the risky arm were independent or imperfectly correlated across players,
+if the law of the payoff process differed across players, or if each player had access to more
+than one risky arm.6
+5
+
+Cohen and Solan (2013) analyze a single-agent version of the bandit problem with Lévy payoffs in
+which the state is binary and jumps are always good news; assuming that players discount the future,
+they can dispense with background information.
+6
+Linearity would also fail in a restless bandit model in which the state of the world changed exogenously
+over time. This would be the case, for example, if payoffs were generated by a Brownian motion with
+an unknown drift subject to Markovian state-switching between a high and a low level as in Keller and
+Rady (1999, 2003).
+
+4
+
+Besides Bolton and Harris (2000), the undiscounted limit of a continuous-time stochastic game with a one-dimensional diffusion state has also been studied in Harris (1988, 1993)
+and Bergemann and Välimäki (1997, 2002). More recent applications of this methodology
+to single-agent experimentation problems can be found in Bonatti (2011) and Peitz, Rady
+and Trepper (2017). The above considerations may be useful for applications of the strong
+long-run average criterion in continuous-time stochastic optimization problems and games
+with richer state spaces and dynamics.
+Through its use of the strong long-run average criterion, which permits a minimizationof-regret interpretation, the paper is loosely related to the vast literature on no-regret
+learning in non-Bayesian bandit problems or games; see Blum and Mansour (2007) or
+Bubeck and Cesa-Bianchi (2012), for example. While the emphasis in this literature is on
+upper bounds for cumulative regret and on the speed of convergence to an optimum or
+Nash equilibrium, the strategic-experimentation literature approaches the entire learning
+process from a dynamic equilibrium perspective – that is, it analyzes learning in, not of,
+an equilibrium.
+The rest of the paper is organized as follows. Section 2 sets up the game and states
+our assumptions on priors, payoff-generating processes and strategy spaces. Section 3
+presents the infinitesimal generator of the process of posterior beliefs. Section 4 constructs
+the unique symmetric Markov perfect equilibrium and discusses its properties. Section 5
+presents extensions of our analysis to two settings with a continuously distributed state
+of the world. Section 6 offers some concluding remarks.
+
+2 The Experimentation Game
+Time t ∈ [0, ∞[ is continuous. There are N ≥ 1 players, each of them endowed with
+one unit of a perfectly divisible resource per unit of time. Each player faces a two-armed
+bandit problem where she continually has to decide what fraction of the available resource
+to allocate to each arm. One arm is safe, the other risky.
+The safe arm generates a known constant payoff s > 0 per unit of time. The evolution
+of the payoffs generated by the risky arm depends on a state of the world, ℓ, which
+nature draws from the set {0, 1, . . . , L} with L ≥ 1 according to the positive probabilities
+π0 , . . . , πL . Players do not observe the state, but know its distribution. They also know
+that the payoff process associated with player n’s risky arm is of the form
+Xtn = ρ t + σZtn + Ytn ,
+where Z n is a standard Wiener process and Y n is a compound Poisson process whose
+
+5
+
+∫
+Lévy measure ν is finite and has a finite second moment h2 ν(dh).7 The drift rate ρ, the
+diffusion coefficient σ > 0 and the Lévy measure ν are the same for all players. While σ is
+the same in all states of the world, moreover, ρ and ν vary with the state.8 Conditionally
+on ℓ, the processes Z 1 , . . . , Z N , Y 1 , . . . , Y N are independent.
+We write ρℓ and νℓ for the drift rate and Lévy measure in state ℓ, λℓ = νℓ (R \ {0})
+∫
+for the expected number of jumps per unit of time, and hℓ = R\{0} h νℓ (dh) / λℓ for the
+expected jump size.
+The state-contingent expected risky payoff per unit of time is µℓ = ρℓ + λℓ hℓ . We
+assume that µ0 < µ1 < . . . < µL−1 < µL with µ0 < s < µL , so that neither arm
+dominates the other in terms of expected payoffs. Writing π for the vector of probabilities
+(π1 , . . . , πL ), we let m(π) denote the expected per-period payoff from the risky arm, and
+f (π) a player’s expected per-period payoff under full information:9
+m(π) =
+
+L
+∑
+
+πℓ µ ℓ ,
+
+f (π) =
+
+0
+
+L
+∑
+
+πℓ max{s, µℓ }.
+
+0
+
+Let kn,t ∈ [0, 1] be the fraction of the available resource that player n allocates to
+the risky arm at time t; this fraction is required to be measurable with respect to the
+information that the player possesses at time t. The player’s cumulative payoff up to
+time T is then given by the time-changed process [T − τ n (T )] s + Xτnn (T ) where τ n (T ) =
+∫T
+kn,t dt measures the operational time that the risky arm has been used. As Xtn − µt is
+0
+a martingale, the player’s expected payoff up to T is
+[∫ T
+E
+
+]
+{(1 − kn,t )s + kn,t µ} dt ;
+
+0
+
+here, the expectation is both about the process of allocations kn,t and the unknown expected per-period payoff µ. With s lying in the interior of the range of possible realizations
+of µ, each player has an incentive to learn the quality of the risky arm.
+Here, ν(B) < ∞ is the expected number of jumps per unit of time whose size is in the Borel set
+B ⊆ R\{0}. The finite second moment ensures that the processes X n have finite mean and finite quadratic
+variation. A reminder about Lévy processes can be found in Cohen and Solan (2013, Section 2.1).
+8
+Our assumptions on the diffusion coefficient and the Lévy measures ensure that the players cannot
+infer the true state instantaneously from the continuous and jump part of risky payoffs, respectively.
+Finiteness of Lévy measures simplifies the exposition but can be dropped: it suffices that these measures
+have a finite second moment and satisfy assumptions A3 and A4 of Cohen and Solan (2013) for each
+pair of states. Note also that the framework is flexible enough to accommodate drift rates and Lévy
+measures that are drawn separately from some finite set each. The states 0, 1, . . . , L then correspond to
+the possible pairs (ρ, ν), and the probabilities π0 , . . . , πL describe their joint distribution.
+9
+Given our convention to summarize the distribution of the unknown state by the probabilities of the
+∑L
+realizations 1, . . . , L, the symbol π0 should be viewed as shorthand for 1 − ℓ=1 πℓ from now on.
+7
+
+6
+
+Players do not discount future payoffs; as in Bolton and Harris (2000), they are instead
+assumed to use the strong long-run average criterion. This means that player n chooses
+allocations kn,t so as to maximize
+E
+
+[∫ ∞
+
+{
+
+]
+}
+(1 − kn,t )s + kn,t m(π) − f (π) dt .
+
+0
+
+Here, the integrand is the difference between what a player expects to receive at a given
+point in time and what she would expect to receive were she to be fully informed.10 Note
+that this objective function depends on others’ actions only through their impact on the
+player’s own choices. In fact, we will soon impose restrictions under which others’ actions
+matter only through their effect on a player’s beliefs.
+The players start with a common prior belief about the unknown state ℓ, given by
+the probabilities with which nature draws this state. Thereafter, all observe each other’s
+actions and outcomes as well as a common background signal, so they hold common posterior beliefs throughout time. The background signal is generated by the time-changed
+process Xτ00 (t) where X 0 is an independent process of the same law as each player’s payoff
+process from the risky arm, and τ 0 (t) = k0 t with k0 > 0 exogenously given and arbitrarily
+small. This signal ensures that the players eventually learn the value of µ even if they all
+play safe all the time.
+Let πt denote the vector of common posterior probabilities that the players assign to
+states 1, . . . , L given their observations up to time t. With respect to the information
+filtration generated by these observations, the process of beliefs πt is a Markov process
+(in fact, a jump diffusion) and a martingale. The linearity of the functions m and f now
+implies that E[m(πt )] = m(π) and E[f (πt )] = f (π) for all t > 0, so we can rewrite the
+above objective function as
+E
+
+[∫ ∞
+
+{
+
+]
+}
+(1 − kn,t )s + kn,t m(πt ) − f (πt ) dt ,
+
+0
+
+highlighting the potential for the posterior belief to serve as a state variable.
+From now on, we restrict players to strategies that are Markovian with respect to this
+variable, so that the action kn,t chosen at time t is a deterministic function of πt only.11
+More precisely, we take the players’ common strategy space K to be the set of all Lipschitz
+[∫ {
+} ]
+T
+The integral is the negative of the limit as T → ∞ of T f (π)−E 0 (1 − kn,t )s + kn,t m(π) dt , the
+continuous-time equivalent of the expected regret (or ‘Bayes risk’) considered in Lai (1987), for example.
+In the present context, the strong long-run average criterion is equivalent to minimization of cumulative
+Bayesian regret, therefore.
+11
+In the presence of discrete payoff increments, one actually must take the left limit πt− as the state
+variable because the action chosen at time t cannot depend on a lump-sum payoff that arrives at t. We
+write πt with the understanding that the left limit is meant whenever this distinction is relevant.
+10
+
+7
+
+continuous functions from the L-dimensional simplex
+{
+∆L =
+
+π ∈ RL+ :
+
+L
+∑
+
+}
+πℓ ≤ 1
+
+ℓ=1
+
+to [0, 1]. By standard existence and uniqueness results for solutions of stochastic differential equations, any strategy profile (κ1 , . . . , κN ) ∈ KN gives rise to a well-defined process
+of posterior beliefs,12 and hence to well-defined payoffs
+un (π|κ1 , . . . , κN ) = E
+
+[∫ ∞
+
+]
+{
+}
+[1 − κn (πt )]s + κn (πt )m(πt ) − f (πt ) dt π0 = π ∈ [−∞, 0].
+
+0
+
+A player’s payoff will indeed be −∞ for certain Markov strategies. If the player always
+uses the safe arm, for example, and the true state ℓ is such that µℓ > s, then by almost
+sure convergence of posterior beliefs to the truth, the above integrand will converge to
+s − µℓ < 0 as t grows large, implying a diverging integral in that state. Since this occurs
+with positive prior probability, the expected payoff is −∞, therefore.
+The following considerations lead to a class of strategies with finite expected payoffs.
+Let ∆1L be the set of beliefs π ∈ ∆L such that πℓ = 0 whenever µℓ < s, and ∆0L the set of
+beliefs π ∈ ∆L such that πℓ = 0 whenever µℓ > s. These sets are the faces of the simplex
+on which there is a trivially optimal action: the risky arm on ∆1L , and the safe arm on
+∆0L . We call a strategy κn ∈ K reasonable if ∆1L is contained in the interior of κ−1
+n (1) and
+−1
+0
+∆L is contained in the interior of κn (0). Given such a strategy, each face of the simplex
+on which there is a trivially optimal action has a neighbourhood in ∆L on which the
+strategy selects that action and thus maximizes the expected per-period payoff, so that
+[1 − κn (π)]s + κn (π)m(π) = max{s, m(π)}. On ∆1L and ∆0L , moreover, max{s, m(π)} =
+f (π), hence [1 − κn (π)]s + κn (π)m(π) − f (π) = 0; this holds in particular at each vertex
+of the simplex. Establishing that, in the presence of background information, posterior
+beliefs converge exponentially fast to the truth, we show in the appendix that the expected
+payoff from a reasonable strategy is always finite and, in fact, bounded on the simplex,
+irrespective of the opponents’ profile of Markov strategies.13
+12
+
+For L = 1 and no discontinuous payoff component, i.e. in the setting analyzed in Bolton and Harris
+(2000), the presence of background information allows one to invoke a result of Engelbert and Schmidt
+(1984) whereby any profile of Borel measurable Markov strategies implies a unique solution for the
+belief dynamics; see also Section 5.5 of Karatzas and Shreve (1988). For L = 1, no Brownian payoff
+component, and lump-sum payoffs that are always good news (meaning that ν0 (B) ≤ ν1 (B) for all Borel
+sets B ⊆ R\{0}), one can proceed as in Keller, Rady and Cripps (2005) and Keller and Rady (2010)
+and take K to be the set of functions which are left-continuous and piecewise Lipschitz continuous; as
+beliefs drift down deterministically in between lump-sums, these properties allow one to construct belief
+dynamics in a pathwise fashion. Neither approach generalizes to higher dimensions.
+13
+In the minimization-of-regret interpretation of the payoff criterion,
+this means that all reasonable
+[∫ {
+} ]
+T
+1
+strategies have zero time-averaged Bayesian regret: f (π) − T E 0 (1 − kn,t )s + kn,t m(π) dt → 0 as
+
+8
+
+Strategy κn ∈ K is a best response against κ¬n = (κ1 , . . . , κn−1 , κn+1 , . . . , κN ) ∈ KN −1
+if un (π|κn , κ¬n ) ≥ un (π|κ̃n , κ¬n ) for all π ∈ ∆L and all κ̃n ∈ K. A Markov perfect
+equilibrium (MPE) is a profile of strategies (κ1 , . . . , κN ) ∈ KN that are mutually best
+responses. Such an equilibrium is symmetric if κ1 = κ2 = . . . = κN . Obviously, each
+player must obtain a finite payoff in any MPE.
+
+3
+
+The Infinitesimal Generator
+
+The evolution of posterior beliefs is driven by up to N + 1 distinct sources of information:
+the observations on up to N risky arms plus the background signal. Suppose that only
+player 1 uses the risky arm, and at full intensity. In other words, consider the timeinvariant action profile for which k1 = 1 whereas kn = 0 for all n > 1. Write G for
+the infinitesimal generator of the corresponding belief process – as the payoff-generating
+process is the same on every player’s risky arm, the identity of the player in question does
+indeed not matter here.
+If we now change player 1’s time-invariant intensity to k1 < 1 while keeping all other
+intensities at zero, the resulting deceleration of the process of observations implies the
+scaled-down generator k1 G for the posterior belief; see Dynkin (1965, Theorem 10.12), for
+example. The same applies to the background signal, of course, if it alone is observed,
+with associated generator k0 G.
+As the processes X 0 and X 1 are independent conditionally on the realized state,
+Trotter (1959, Theorem 1) implies that the infinitesimal generator of posterior beliefs is
+(k0 + k1 )G when both the background signal and player 1’s payoffs are observed. By
+the same token, successively adding the other players with time-invariant allocations
+∑
+k2 , . . . , kN leads to the infinitesimal generator (k0 + K)G where K = N
+n=1 kn measures
+how much of the N available units of the resource is allocated to risky arms overall. This
+fact will play a crucial role in our analysis.
+◦
+
+The generator G is that of a jump diffusion. In the interior ∆L of the simplex, its
+action on a C 2 function u is given by
+Gu(π) =
+
+L
+L
+1 ∑∑
+∂ 2 u(π)
+π
+π
+[ρ
+−
+ρ(π)][ρ
+−
+ρ(π)]
+i ℓ i
+ℓ
+2σ 2 i=1 ℓ=1
+∂πi ∂πℓ
+∫
+L
+∑
+∂u(π)
+,
+[u(j(π, h)) − u(π)] ν(π)(dh) −
++
+πℓ (λℓ − λ(π))
+∂πℓ
+R\{0}
+ℓ=1
+
+T → ∞. No-regret learning in this specific sense is thus strictly less restrictive than the strong long-run
+average criterion which, as we shall see, selects a unique optimal strategy given opponents’ play.
+
+9
+
+where
+ρ(π) =
+
+L
+∑
+
+πℓ ρ ℓ ,
+
+ν(π) =
+
+L
+∑
+
+πℓ νℓ ,
+
+λ(π) =
+
+ℓ=0
+
+ℓ=0
+
+L
+∑
+
+πℓ λℓ
+
+ℓ=0
+
+are the expected drift rate of the payoff-generating process, its expected Lévy measure,
+and the expected number of its jumps per unit of time, respectively, given the current
+belief π, and
+πℓ νℓ (dh)
+jℓ (π, h) =
+ν(π)(dh)
+is the revised probability of state ℓ after a lump-sum payoff of size h arrives. The first
+term captures the learning from the continuous part of the payoff-generating process; the
+second term, the discrete belief revision upon the arrival of a lump-sum payoff; and the
+third term, the gradual belief revision when no such lump-sum arrives.
+For L = 1, and hence π = π1 , we obtain the generator computed by Cohen and Solan
+(2013), with the first term simplifying to
+1
+(ρ1 − ρ0 )2 π 2 (1 − π)2 u′′ (π),
+2σ 2
+the expression familiar from Bolton and Harris (1999, 2000). It reflects the fact, established in Liptser and Shiryayev (1977, Theorem 9.1), that when there is no discontinuous
+payoff component (λ0 = λ1 = 0), then the posterior belief πt of a single agent who allocates his entire resource to the risky arm follows a diffusion process with zero drift and
+diffusion coefficient (ρ1 − ρ0 ) σ −1 πt (1 − πt ) relative to the agent’s information filtration.14
+For L > 1, a generalization of Liptser and Shiryayev (1977, Theorem 9.1) shows that, from
+the agent’s perspective, the corresponding belief process πt is a driftless L-dimensional
+diffusion with instantaneous variance-covariance matrix given by
+[
+][
+]
+Cov [dπi,t , dπℓ,t | πt ] = πi,t (ρi − ρ(πt )) σ −1 πℓ,t (ρℓ − ρ(πt )) σ −1 dt,
+hence the structure of the first term in Gu.15
+The second and third terms generalize their counterparts in Cohen and Solan (2013) to
+L > 1 in the obvious way. In the special case that L = 1 and the size of lump-sum payoffs
+is uninformative (meaning that conditional on the arrival of a lump-sum, the distribution
+of its size does not depend on ℓ), these terms reduce to
+[ (
+λ(π) u
+
+πλ1
+(1 − π)λ0 + πλ1
+
+)
+
+]
+− u(π) − (λ1 − λ0 )π(1 − π)u′ (π),
+
+More precisely, the belief evolves according to dπt = σ −1 πt [ρ1 − ρ(πt )] dZ̄t where the innovation pro(
+)
+cess Z̄t , given by dZ̄t = σ −1 [ρ − ρ(πt )] dt + σ dZt , is a Wiener process relative to the agent’s information
+filtration.
+15
+This generalization already appears in Veronesi (2000), for example.
+14
+
+10
+
+as in Keller, Rady and Cripps (2005) and Keller and Rady (2010).
+Note that we have not imposed any mutual absolute continuity assumptions on the
+measures ν0 , . . . , νL . As a consequence, lump-sum payoffs of a certain size may rule out
+certain states, so that the posterior belief jumps to a subsimplex of ∆L of dimension
+lower than L. Once this happens, Bayesian updating ensures that beliefs remain in this
+subsimplex.
+
+4
+
+Symmetric Markov Perfect Equilibrium
+
+Suppose that all players except player n use the strategy κ† ∈ K, and write (κn , κ†¬n ) for
+the strategy profile that results when player n uses the strategy κn ∈ K.
+When choosing κn , player n faces a problem of optimal stochastic control of a jump
+diffusion, and κn is a best response if and only if the payoff function un (·|κn , κ†¬n ) is the
+value function for that control problem. The associated HJB equation is
+{
+}
+0 = max (1 − k)s + km(π) − f (π) + [k0 + (N − 1)κ† (π) + k]Gu(π) .
+
+(1)
+
+k∈[0,1]
+
+Following Bolton and Harris (2000), we exploit the fact that k0 + (N − 1)κ† (π) + k is
+positive (because of the background signal) and rearrange the HJB equation as
+s − f (π) + k[m(π) − s]
++ Gu(π),
+k∈[0,1] k0 + (N − 1)κ† (π) + k
+
+0 = max
+
+which demonstrates that the set of maximizers does not depend on continuation values.
+In a second step, we rewrite the HJB equation so that k appears only in the denominator:
+[k0 + (N − 1)κ† (π)][s − m(π)] − [f (π) − s]
+− [s − m(π)] + Gu(π).
+k∈[0,1]
+k0 + (N − 1)κ† (π) + k
+
+0 = max
+
+(2)
+
+Following Bolton and Harris (2000) again, we define the incentive to experiment by
+I(π) =
+
+f (π) − s
+s − m(π)
+
+when m(π) < s, and ∞ otherwise. When I(π) < k0 + (N − 1)κ† (π), the numerator in (2)
+is positive and the maximum is achieved by k = 0; when I(π) > k0 + (N − 1)κ† (π), the
+numerator is negative and the maximum is achieved by k = 1; when I(π) = k0 + (N −
+1)κ† (π), the numerator is zero and the choice of k is inconsequential.
+There are three different ways, therefore, in which k = κ† (π) can achieve the maximum
+in the HJB equation: either κ† (π) = 0 and I(π) ≤ k0 , or κ† (π) = 1 and I(π) ≥ k0 + N − 1,
+11
+
+or 0 < κ† (π) < 1 and I(π) = k0 + (N − 1)κ† (π). This pins down κ† (π) in terms of the
+incentive to experiment, I(π), the strength of the background signal, k0 , and the number
+of players, N :
+
+
+if I(π) ≤ k0 ,
+ 0
+I(π)−k0
+†
+κ (π) =
+(3)
+if k0 < I(π) < k0 + N − 1,
+N −1
+
+
+1
+if I(π) ≥ k0 + N − 1.
+As the partial derivatives of the incentive to experiment I are clearly bounded on the
+compact set {π ∈ ∆L : k0 ≤ I(π) ≤ k0 + N − 1}, the function κ† is Lipschitz continuous
+and hence an element of K. Finally, it is straightforward to verify that κ† is a reasonable
+strategy as defined in Section 2.
+Proposition. All players using the strategy κ† constitutes the unique symmetric Markov
+perfect equilibrium of the experimentation game.
+Proof: Suppose that all players except player n use the strategy κ† defined in (3).
+Let u∗ (·|κ†¬n ) denote the value function of the control problem that player n faces when
+choosing a best response, and u(·|κ† , κ†¬n ) the player’s payoff function when she also uses
+strategy κ† . By definition, u∗ (·|κ†¬n ) ≥ u(·|κ† , κ†¬n ).
+We show in the appendix that u∗ (·|κ†¬n ) is a viscosity subsolution of the HJB equation
+◦
+
+†
+(1) in the interior ∆L of the L-dimensional simplex, and u(·|κ† , κ¬n
+) a viscosity superso16
+lution; cf. Lemmas A.2–A.3. As both functions vanish in all vertices of ∆L , the comparison principle for viscosity sub- and supersolutions established in Ishii and Yamada
+(1993, Theorem 3.1) allows us to conclude that u∗ (·|κ†¬n ) ≤ u(·|κ† , κ†¬n ); cf. Corollary
+A.1.17 As u∗ (·|κ†¬n ) = u(·|κ† , κ†¬n ), therefore, all players using the strategy κ† constitutes
+an equilibrium.18 Uniqueness of this symmetric equilibrium follows from the arguments
+that led us from the HJB equation (1) to the representation (3) for candidate equilibrium
+actions.
+
+Figures 1 and 2 illustrate the case L = 2. (In both figures, µ0 = 2, µ1 = 5, µ2 = 8,
+N = 4 and k0 = 0.2; s = 6 in Figure 1, and s = 4 in Figure 2.) The solid lines are the
+boundaries of the sets of beliefs at which the equilibrium requires full experimentation
+(κ† = 1) and no experimentation (κ† = 0), respectively. The dotted lines are level curves
+of κ† for the experimentation intensities 0.2, 0.4, 0.6 and 0.8. A comparison of the two
+figures exhibits the familiar property that a decrease in the reward from the safe arm
+gives the players an increased incentive to experiment.
+16
+
+A definition of these concepts is also given in the appendix.
+It is this comparison principle that implies the uniqueness result for viscosity solutions to the HJB
+equation alluded to in the introduction.
+18
+The identity between these two functions further implies that the value function is both a sub- and
+a supersolution, confirming the claim made in the introduction that u∗ (·|κ†¬n ) is a viscosity solution of
+the HJB equation.
+17
+
+12
+
+1 ..........................
+
+1 ..........................
+
+... .....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+............
+.....
+.
+.
+... ..........
+.....
+..........
+...
+.....
+..........
+...
+.....
+..........
+.....
+...
+.
+.
+.
+.....
+.
+.
+.
+...
+..........
+.....
+..........
+...
+.....
+..........
+...
+.....
+..........
+...
+.....
+.
+.
+.
+.
+.
+.....
+..........
+...
+.....
+..........
+...
+.....
+..........
+...
+.....
+..........
+...
+.....
+.
+.
+.
+.
+.
+..........
+...
+.....
+..........
+.....
+...
+..........
+...
+.......... ..........
+...
+.......... .....
+...
+.......... .....
+...
+................
+...........
+...
+.....
+...
+.....
+...............
+.....
+.
+.
+.
+.
+...
+.....................
+.....
+.....................
+...
+.....
+.....................
+.....
+...
+.
+.
+.
+.
+.....................
+.....
+...
+.
+.
+.
+.
+.
+.....
+.
+.
+.
+.
+.
+.
+.
+.....................
+...
+.....
+.....................
+...
+.....
+.....................
+...
+.....
+.
+.
+.
+.
+.....................
+.....
+...
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.....................
+...
+..............................
+...
+...........
+...
+.....
+...
+.....
+...
+.....
+..
+...
+........................................................................................................................................................................................................................................................................................
+
+κ† = 1
+
+π2
+
+π2
+
+κ† = 0
+
+0
+
+π1
+
+... .....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+...
+.....
+.....
+..
+.....
+............
+.....
+.
+... ..........
+.....
+..........
+...
+.....
+..........
+...
+.....
+..........
+...
+.....
+.
+.
+.
+.
+..........
+.....
+...
+..........
+.....
+...
+..........
+.....
+...
+.....
+..........
+...
+.....
+.
+.
+.
+.
+.
+..........
+...
+.....
+..........
+.....
+...
+..........
+.....
+...
+..........
+.....
+...............
+.
+.
+.....
+.
+.
+.
+..........
+... .................
+.....
+..........
+..............
+...
+.....
+..........
+..............
+..
+...
+.................................................................................................................................................................................................................................................................................................................
+
+κ† = 1
+
+κ† = 0
+
+1
+
+0
+
+Figure 1: Equilibrium actions for L = 2
+and µ0 < µ1 < s < µ2
+
+π1
+
+1
+
+Figure 2: Equilibrium actions for L = 2
+and µ0 < s < µ1 < µ2
+
+Figures 1 and 2 further illustrate the fact that like the functions m, f , and I, the
+equilibrium strategy κ† is non-decreasing in each component of π = (π1 , . . . , πL ); thus,
+any shift in subjective probability mass from state 0 to another state weakly increases the
+intensity of experimentation.
+Note that by equation (3), the set of beliefs for which κ† (π) = 0 is independent of the
+number of players. This is a stark manifestation of the incentive to free-ride on information
+generated by others. In the terminology coined by Bolton and Harris (1999), it means that
+there is no ‘encouragement effect’: the prospect of subsequent experimentation by other
+players provides a player no incentive to increase the current intensity of experimentation
+and thereby shorten the time at which the information generated by the other players
+arrives. Intuitively, this simply reflects our assumption that players do not discount
+future payoffs and hence are indifferent as to their timing. Formally, the absence of
+the encouragement effect is a consequence of the linearity of the infinitesimal generator
+of posterior beliefs in k0 + K: as the value of future experimentation by other players is
+captured by a player’s equilibrium continuation values, yet best responses are independent
+of those continuation values, there is no channel for future experimentation by others to
+impact current actions.
+Free-riding can also be seen in the fact that κ† is non-increasing in N , and decreasing
+where it assumes interior values. Figure 3 illustrates this effect. On the horizontal axis
+we set π1 = π2 and let that common belief range from 0 to 0.5: so it is a slice through
+the simplex from the origin to the midpoint of the opposite edge. (In this figure, the
+parameters are as in Figure 1 except that N varies from 2 for the leftmost curve to 10 for
+the rightmost curve.)
+
+13
+
+κ†
+
+Belief
+
+Figure 3: Equilibrium actions for L = 2, π1 = π2 and N ∈ {2, 4, 6, 8, 10}
+The dependence of the overall intensity of experimentation on the number of players is
+less clear cut: roughly speaking, N κ† increases in N at beliefs where κ† requires exclusive
+use of the risky arm, but decreases at beliefs where both arms are used simultaneously.
+Players also free-ride on the background information. The less of it is available (i.e. the
+lower k0 ), the more experimentation of their own the players perform; in particular, the set
+of beliefs at which they use the risky arm exclusively widens, and the set of beliefs at which
+they use the safe arm exclusively shrinks. For k0 ↓ 0, in fact, the equilibrium strategy
+κ† converges monotonically to the Markov strategy κ†0 defined as follows: κ†0 (π) = 0
+when f (π) = s; κ†0 (π) = I(π)/(N − 1) when 0 < I(π) < N − 1; and κ†0 (π) = 1 when
+I(π) ≥ N − 1. This strategy obviously specifies the optimal action when f (π) = s and,
+with k0 = 0, the action k = κ†0 (π) solves the maximization problem in equation (2) at all
+other beliefs. Nevertheless, κ†0 is not part of a symmetric MPE of the undiscounted game
+without background information. The reason is that the strong long-run average criterion
+implies a payoff equal to −∞ for the corresponding strategy profile in the interior of the
+simplex, so the HJB equation loses its meaning.19
+It was already said in Section 2 that the presence of background information ensures
+exponentially fast convergence of beliefs to the degenerate distribution concentrated on
+the true state; this immediately implies that equilibrium actions converge exponentially
+19
+
+This is most easily seen in the setting of Keller, Rady and Cripps (2005) with L = 1, no Brownian
+payoff component, no lump-sum payoffs in state 0, and a Poisson payoff process in state 1. If state 0 is
+the true state, the belief π1 converges deterministically to 0 from any prior in the open unit interval and,
+even though κ†0 specifies a positive intensity of experimentation all along the way, this intensity decreases
+quite fast. As a consequence, the convergence of the posterior to the truth is so slow in this state that the
+expected accumulated shortfall of received payoffs relative to the expected full-information payoff grows
+infinitely large. Details are available from the authors upon request.
+
+14
+
+fast to the full-information optimum as well.
+As to the short-run dynamics of beliefs in equilibrium, the present framework permits the analysis of experimentation games in which large payoff increments are bad
+news, whereas smaller increments are good news.20 For example, let L = 1 for simplicity, with ρ0 = ρ1 and λ0 = λ1 . Assume that the payoff increments are in the set
+{−10, −5, 5, 10}. For the ‘good’ arm, the associated probabilities of a lump-sum of that
+size are (0.1, 0.3, 0.5, 0.1), so the expected increment is 1; for the ‘bad’ arm, the probabilities are (0.5, 0.1, 0.1, 0.3), and the expected increment is −2. When a payoff increment
+occurs, the belief jumps – up if the increment is moderate (−5 and 5 are relatively more
+likely if the arm is ‘good’), and down if the increment is extreme (−10 and 10 are relatively more likely if the arm is ‘bad’). So, in this stripped-down illustration, an arrival of
+the largest possible payoff increment is bad news, and may well cause the players to stop
+experimenting.
+
+5 Continuous State Spaces and Sufficient Statistics
+This section presents two specifications of priors and payoff-generating processes that fall
+outside the framework of Section 2 but still permit the same analysis as in Sections 3 and 4.
+In both settings, the unknown state of the world is drawn from a continuous distribution
+of unbounded support, with conjugate priors ensuring that the players’ information is
+captured by a two-dimensional sufficient statistic, which can serve as the state variable for
+Markov strategies.21 Models in which agents have beliefs and observe stochastic processes
+like those in Sections 5.1 and 5.2 can be found in Jovanovic (1979) and Moscarini and
+Squintani (2010), respectively.
+
+5.1 Brownian Payoffs, Normal Prior
+Suppose that the payoff-generating processes and the background signal are of the form
+Xtn = µ t + σZtn ,
+where the Z n are independent standard Wiener processes and nature draws the unknown
+drift µ from a normal distribution with mean m0 and precision τ0 > 0. This is also
+the players’ common prior. Given the Gaussian processes they observe, players then
+20
+
+In Keller, Rady and Cripps (2005) and Keller and Rady (2010, 2015) lump-sum sizes are completely
+uninformative, while in Cohen and Solan (2013) lump-sums are informative, but always good news.
+21
+The unbounded state space requires adjustments to the proof (via uniqueness of viscosity solutions
+to the HJB equation) that every player using the strategy κ† constitutes an MPE of the game; we omit
+the details here.
+
+15
+
+believe at time t that µ is distributed according to a normal distribution with some
+mean mt and precision τt > 0; see DeGroot (1970, Chapter 9), for example. The pair
+πt = (mt , τt ) constitutes a sufficient statistic for the updating of beliefs, therefore. Given
+a generic π = (m, τ ) ∈ R × ]0, ∞[ , the corresponding probability density function for µ is
+(
+)
+g(µ; π) = τ 1/2 ϕ (µ − m)τ 1/2 , where ϕ denotes the standard normal density. Let G(·; π)
+denote the associated cumulative distribution function.
+As in Section 3, consider a single player allocating his entire resource to the risky arm.
+Following Chernoff (1968, Lemma 4.1) or Liptser and Shiryayev (1977, Theorem 10.1),
+τt increases deterministically at the rate σ −2 and mt is a driftless diffusion process with
+diffusion coefficient σ −1 τt−1 relative to the player’s information filtration.22 As a result,
+we see that
+[
+]
+1
+1 ∂ 2 u(π) ∂u(π)
++
+Gu(π) = 2
+σ 2τ 2 ∂m2
+∂τ
+for any function of class C 2,1 . By the same arguments as in Section 3, moreover, the
+generator associated with time-invariant intensities (k0 , k1 , . . . , kN ) ∈ [0, 1]N +1 is again
+(k0 + K)G.
+Since the precision τt increases over time, the relevant state space is the half-plane
+Π = R × [τ0 , ∞[ . As to admissible strategies, we take K to be the set of all functions
+κ : Π → [0, 1] such that κτ −1 is Lipschitz continuous on Π. Given a strategy profile
+∑
+(κ1 , . . . , κN ) ∈ KN , the sum K = N
+n=1 κn also lies in K, and the system we need to solve
+is
+dm = K(m, τ ) τ −1 σ −1 dZ̄, dτ = K(m, τ ) σ −2 dt.
+The change of variable η = ln τ transforms this into dm = K(m, eη ) e−η σ −1 dZ̄ and dη =
+K(m, eη ) e−η σ −2 dt; as K(m, eη ) e−η is Lipschitz continuous in (m, η) on R × [ln τ0 , ∞[ ,
+this system has a unique solution, as was to be shown.
+We can now replicate the arguments of Section 4 in the present setting. As a first
+step, we compute the expected current payoff m(π), the expected full-information payoff
+f (π), and the incentive to experiment I(π). The expected current payoff m(π) is simply
+the projection of π on its first component. For the expected full-information payoff, we
+have
+f (π) = s Φ(z) + m [1 − Φ(z)] + τ −1/2 ϕ(z),
+where z = (s − m)τ 1/2 and Φ denotes the standard normal cumulative distribution func∫∞
+tion. To see this, note first that f (π) = sG(s; π) + s µ g(µ; π) dµ. We trivially obtain
+(
+)
+∫s
+∫z
+G(s; π) = −∞ g(µ; π) dµ = −∞ ϕ(x) dx = Φ(z). Since g(µ; π) ∝ exp − 12 (µ − m)2 τ ,
+moreover, we have dg(µ; π) = −(µ − m)τ g(µ; π) dµ and so µ g(µ; π) dµ = m g(µ; π) dµ −
+More precisely, it can be shown that dmt = σ −1 τt−1 dZ̄t and dτt = σ −2 dt where, now, the innovation
+(
+)
+process is dZ̄t = σ −1 [µ − mt ] dt + σ dZt . Note that the expression equivalent to that for dmt to be
+found in equation (9) of Jovanovic (1979) omits the term [µ − mt ] dt.
+22
+
+16
+
+τ −1 dg(µ; π), implying
+∫ ∞
+
+∫ ∞
+µ g(µ; π) dµ =
+
+s
+
+m g(µ; π) dµ −
+
+s
+
+= m [1 − G(s; π)] + τ
+
+∫ ∞
+
+τ −1 dG(µ; π)
+
+s
+−1
+
+g(s; π) = m [1 − Φ(z)] + τ −1/2 ϕ(z).
+
+The above representation makes it straightforward to verify that f is strictly increasing
+in m and strictly decreasing in τ .23 This implies that I and κ† as defined in (3) are nondecreasing in m and non-increasing in τ .
+When m < s, we have
+I(π) =
+
+s Φ(z) + m [1 − Φ(z)] + τ −1/2 ϕ(z) − s
+= Φ(z) − 1 + z −1 ϕ(z).
+s−m
+
+In the appendix, we verify that κ† ∈ K by showing that Iτ −1 is Lipschitz continuous on
+the set {π ∈ Π : k0 ≤ I(π) ≤ k0 + N − 1}. This is more involved than in scenarios with a
+discrete prior because the set in question is unbounded.
+Figure 4 illustrates equilibrium actions as a function of the posterior mean m and
+variance τ −1 . (In this figure, s = 6 and N = 4.) As in Figures 1–2, the solid curves are
+the boundaries of the sets of beliefs at which the equilibrium requires full experimentation or no experimentation, and the dashed lines are level curves for κ† equal to 0.2,
+0.4, 0.6 and 0.8. All these curves are downward sloping; as one would expect, there is
+a trade-off between mean and variance with the latter capturing the ‘option value’ of
+experimentation. In particular, a very high variance is needed to induce a high intensity
+of experimentation at low means. As the mean approaches the safe flow payoff, the level
+curves become steeper and steeper so that the posterior variance has a diminishing impact
+on the intensity with which the players explore the risky arm.
+
+5.2 Poisson Payoffs, Gamma Prior
+Let s > 0 for the safe arm. Suppose that the payoff-generating processes and the background signal are independent Poisson processes whose unknown common intensity µ is
+drawn from a gamma distribution with parameters α0 > 0 and β0 > 0. This is also the
+players’ common prior. Given the processes they observe, players then believe at time
+t that µ is distributed according to a gamma distribution with some parameters αt > 0
+and βt > 0, which together constitute a sufficient statistic again; see DeGroot (1970,
+Chapter 9), for example. Given a generic π = (α, β) ∈ ]0, ∞[2 , the probability density
+23
+
+Alternatively, since max{s, µ} is increasing in µ, a first-order stochastic dominance argument can
+be used to establish that ∂f (π)/∂m > 0, and since max{s, µ} is convex in µ, a second-order stochastic
+dominance argument can be used to establish that ∂f (π)/∂τ < 0.
+
+17
+
+κ† = 1
+Variance
+κ† = 0
+
+Mean
+
+Figure 4: Equilibrium actions for Brownian payoffs and normal prior
+function for µ is g(µ; π) = [β α /Γ(α)]µα−1 e−βµ ; the mean and variance of µ are α/β and
+α/β 2 , respectively. We again write G(·; π) for the corresponding cumulative distribution
+function.
+Once more, consider a single player allocating his entire resource to the risky arm. He
+expects to obtain a positive increment between t and t + dt with probability (αt /βt ) dt,
+in which case Bayes’ rule implies that πt jumps to (αt + 1, βt ); with probability 1 −
+(αt /βt ) dt, there is no such increment and dπt = (dαt , dβt ) = (0, dt). Thus, α counts
+arrivals of increments and β measures the time that has elapsed – again, see DeGroot
+(1970, Chapter 9). As a consequence, we have24
+Gu(π) =
+
+α
+∂u(π)
+[u(α + 1, β) − u(π)] +
+.
+β
+∂β
+
+Once more, the generator associated with time-invariant intensities (k0 , k1 , . . . , kN ) ∈
+[0, 1]N +1 is (k0 + K)G.
+Given that αt and βt increase over time, and αt can only do so in unit increments, the
+relevant state space is Π = {α0 + j : j = 0, 1, 2, . . .} × [β0 , ∞[ . For K, we choose the set of
+all functions κ : Π → [0, 1] such that κ(α0 +j, ·) is right-continuous and piecewise Lipschitz
+continuous for all j. Starting from any π ∈ Π, any strategy profile (κ1 , . . . , κN ) ∈ KN
+induces a well-defined law of motion for πt .
+As the unknown intensity µ is also the risky arm’s average payoff per unit of time, we
+see that the expected current payoff is m(π) = α/β. The expected full-information payoff
+24
+
+Up to a change of variables from (α, β) to (β, m) with m = α/β, this generator also appears in Ding
+and Ryzhov (2016).
+
+18
+
+is
+f (π) = s G(s; π) +
+
+α
+[1 − G(s; α + 1, β)],
+β
+
+with the second term obtained as follows:
+∫ ∞
+∫ ∞
+∫
+β α α−1 −βµ
+α ∞ β α+1 α −βµ
+µ g(µ; π) dµ =
+µ
+µ e
+dµ =
+µ e
+dµ
+Γ(α)
+β s αΓ(α)
+s
+s
+∫
+∫
+α ∞ β α+1
+α ∞
+α −βµ
+=
+µ e
+dµ =
+g(µ; α + 1, β) dµ
+β s Γ(α + 1)
+β s
+=
+
+α
+[1 − G(s; α + 1, β)].
+β
+
+The formula for f makes it straightforward to verify that, exactly like m, this function
+is strictly increasing in α and strictly decreasing in β.25 Consequently, the incentive to
+experiment I and the strategy κ† as defined in (3) are non-decreasing in α and nonincreasing in β.
+For m(π) < s, we have
+I(π) =
+
+s G(s; α, β) + αβ [1 − G(s; α + 1, β)] − s
+s − αβ
+
+=
+
+s G(s; α, β) − αβ G(s; α + 1, β)
+s − αβ
+
+− 1.
+
+In the appendix, we verify that κ† ∈ K by showing for any fixed α that I(α, ·) has a
+bounded first derivative when m(π) < s.
+Figure 5 illustrates the mean-variance trade-off in equilibrium actions for Poisson
+payoffs and gamma prior. (Here, as in the example with Brownian payoffs and normal
+prior, s = 6 and N = 4; the curves shown are thus the exact counterparts of those in
+Figure 4.) To compute the level curves, one uses the fact that the shape parameter α
+equals the squared mean of the gamma distribution divided by its variance, and β is α
+divided by the mean. The similarity to Figure 4 is striking; a closer comparison reveals
+that the level curves in the Brownian-normal case are somewhat steeper than those in the
+Poisson-gamma case. This is because in the former, an increase in the variance induces
+a mean-preserving spread for the random variable α on the whole real axis, whereas in
+the latter, the mean-preserving spread is concentrated on the positive half-axis and thus
+raises the option value of experimentation by more.
+Alternatively, for α′ > α′′ the likelihood ratio g(α; α′ , β)/g(α; α′′ , β) is increasing, and for β ′ > β ′′ the
+likelihood ratio g(α; α, β ′ )/g(α; α, β ′′ ) is decreasing. Since the likelihood-ratio ordering implies first-order
+stochastic dominance, f has the stated monotonicity properties.
+25
+
+19
+
+κ† = 1
+Variance
+κ† = 0
+
+Mean
+
+Figure 5: Equilibrium actions for Poisson payoffs and gamma prior
+
+6
+
+Concluding Remarks
+
+We have seen that when rewards from the risky arm are generated by IID Lévy processes
+with an unknown average payoff per unit of time, the players’ strategy in the symmetric
+MPE of the undiscounted experimentation game depends only – and in a very simple
+functional form – on the safe payoff, the expected current payoff of the risky arm, and the
+expected full-information payoff. Given a finite set from which nature draws the unknown
+average payoff, the equilibrium strategy is then independent of the actual specification of
+the payoff-generating processes.
+As to the settings with a continuous prior, recall that in the Brownian-normal case
+the precision of the posterior distribution increases unboundedly with time, as does the
+inverse of the variance in the Poisson-gamma case. Consequently, the posterior probability density function becomes concentrated on a narrow domain of the support. If we
+approximated the normal or gamma distribution with a discrete distribution then, over
+time, the beliefs would become more and more concentrated on the discrete values closest
+to the true parameter – this suggests that we could take the ‘engineering’ approach and
+focus on discrete distributions, with the specification of the payoff-generating processes
+being irrelevant.26
+Letting the discount rate go to zero is going to make the analysis easier in many
+dynamic settings, but it remains unclear, in general, whether the simplification will be as
+great as in the present case. Candidates for optimal strategies or best responses may be
+26
+
+But note that if the two closest neighbours of the true average payoff µ per unit of time are µℓ and µℓ+1
+with µℓ < µ < µℓ+1 , then, although m(πT ) ≃ µ for large T , we would have Var[µ|πT ] ≃ (µℓ+1 −µ)(µ−µℓ ),
+which is bounded away from zero.
+
+20
+
+easier to identify in the undiscounted limit, but there remains the need to obtain a welldefined law of motion, which may again require restrictions such as Lipschitz continuity
+and could even lead to existence problems. Nevertheless, we believe that the strong longrun average criterion has the potential to prove useful in other contexts, especially since
+strategies which are optimal under this criterion will shed light on (at least approximately)
+optimal behaviour for small positive discount rates.
+
+21
+
+Appendix
+Boundedness of Payoffs from Reasonable Strategies
+We present the case L = 1 only, so that ℓ ∈ {0, 1}, π = π1 ∈ [0, 1], µ0 < s < µ1 , m(π) =
+(1 − π)µ0 + πµ1 and f (π) = (1 − π)s + πµ1 . Suppose first that the Lévy measures ν0 and ν1 are
+non-trivial and equivalent.
+For the description of the evolution of beliefs, it is convenient to work with the log odds
+ratio
+πt
+,
+ωt = ln
+1 − πt
+so that
+πt =
+
+eωt
+1 + eωt
+
+and 1 − πt =
+
+e−ωt
+.
+1 + e−ωt
+
+Lemma A.1 There exists a constant C > 0 such that for all x, y ∈ R,
+ex+y
+ex
+ex
+ex
+≤
++
+y
++
+C
+y2.
+1 + ex+y
+1 + ex (1 + ex )2
+(1 + ex )3
+Proof: For
+f (x, y) =
+
+ex+y
+,
+1 + ex+y
+
+we compute the partial derivatives
+fy (x, y) =
+
+ex+y
+,
+(1 + ex+y )2
+
+fyy (x, y) =
+
+ex+y (1 − ex+y )
+.
+(1 + ex+y )3
+
+For fixed x, the function f (x, ·) thus has the following second-order Taylor approximation around
+y0 = 0:
+ex
+ex
+1 ex (1 − ex ) 2
+f (x, y) ≈
++
+y
++
+y .
+1 + ex (1 + ex )2
+2 (1 + ex )3
+As 1 − ex ≤ 1, we have the local (with respect to the second variable) upper bound
+f (x, y) ≤
+
+ex
+ex
+1
+ex
++
+y
++
+y2.
+1 + ex (1 + ex )2
+2 (1 + ex )3
+
+Replacing the factor 12 in the last term by a sufficiently large constant C ensures a global upper
+bound.27
+Suppose now that starting from π0 = π (and corresponding ω0 = ω), the players use the
+strategy profile (κ1 , . . . , κN ) ∈ KN . By an extension of the results in Cohen and Solan (2013,
+Section 3.2) to more than one agent, the log odds ratio at time t > 0 can be written as
+[
+ωt = ω + η ℓ k 0 t +
+
+N ∫ t
+∑
+
+]
+κn (πs− ) ds + Mtℓ ,
+
+n=1 0
+27
+
+Numerical computations suggest that C = 2 is large enough.
+
+22
+
+where
+ηℓ = (−1)ℓ+1
+
+∫
+
+(ρ1 − ρ0 )2
+− (λ1 − λ0 ) +
+2σ 2
+
+ln
+R\{0}
+
+ν1
+(h) νℓ (dh),
+ν0
+
+ν1
+ℓ
+ν0 is the Radon-Nikodym derivative of ν1 with respect to ν0 , and M is a martingale under the
+probability measure Pℓ associated with state ℓ. The expectation and variance of M ℓ under this
+measure, moreover, satisfy Eℓ [Mtℓ ] = 0 and Varℓ [Mtℓ ] ≤ Cℓ t for all t and a positive constant
+Cℓ .28
+As ln x < x − 1 for all positive x ̸= 1, and νν10 = ( νν10 )−1 , one sees that
+
+∫
+
+ν1
+ln (h) ν0 (dh) < λ1 − λ0 <
+ν0
+R\{0}
+
+∫
+ln
+R\{0}
+
+ν1
+(h) ν1 (dh)
+ν0
+
+unless ν1 = ν0 , in which case the inequality µ1 > µ0 implies ρ1 > ρ0 . So η0 < 0 < η1 . As κn ≥ 0
+for all n, this in turn implies
+ω + η0 k0 t + Mt0 ≥ ωt ≥ ω + η1 k0 t + Mt1 .
+By Lemma A.1,
+0
+
+eω+η0 k0 t
+eω+η0 k0 t+Mt
+eω+η0 k0 t
+eω+η0 k0 t
+0
+≤
+πt ≤
++
+M
++
+C
+(Mt0 )2
+0
+t
+ω+η
+k
+t
+ω+η
+k
+t
+2
+ω+η
+k
+t
+3
+ω+η
+k
+t+M
+0
+0
+0
+0
+0
+0
+0
+0
+1
++
+e
+(1
++
+e
+)
+(1
++
+e
+)
+t
+1+e
+and
+e−ω−η1 k0 t
+e−ω−η1 k0 t
+e−ω−η1 k0 t−Mt
+e−ω−η1 k0 t
+1
+−
+M
++
+C
+(Mt1 )2 .
+1 − πt ≤
+≤
+1
+t
+−ω−η
+k
+t
+−ω−η
+k
+t
+2
+−ω−η
+k
+t
+3
+−ω−η
+k
+t−M
+1
+0
+1
+0
+1
+0
+1
+0
+1
++
+e
+(1
++
+e
+)
+(1
++
+e
+)
+t
+1+e
+1
+
+Writing Cℓ′ = CCℓ , we thus have
+(
+)
+E0 [πt ] ≤ eω+η0 k0 t 1 + CVar0 [Mt0 ] = eω+η0 k0 t (1 + C0′ t) =
+
+π
+eη0 k0 t (1 + C0′ t)
+1−π
+
+and
+(
+)
+1 − π −η1 k0 t
+E1 [1 − πt ] ≤ e−ω−η1 k0 t 1 + CVar1 [Mt1 ] = e−ω−η1 k0 t (1 + C1′ t) =
+e
+(1 + C1′ t).
+π
+Now let player n use a reasonable strategy. Then there is a constant C2 > 0 such that
+[1 − κn (π)]s + κn (π)m(π) − f (π) ≥ C2 [max{s, m(π)} − f (π)]
+for all π.29 Note that max{s, m(π)} − f (π) is bounded below by s − f (π) = π (s − µ1 ) and by
+m(π) − f (π) = (1 − π) (µ0 − s).
+Given the prior belief π0 = π, the player uses the expectation operator Eπ = (1 − π)E0 + πE1
+to compute her objective function. Thus,
+28
+
+For any fixed action profile, M ℓ has stationary increments, so its variance grows linearly with time.
+Cℓ can be chosen as the rate at which the variance grows when all players use the risky arm exclusively.
+29
+This is because [1 − κn (π)]s + κn (π)m(π) = max{s, m(π)} in neighbourhoods of π = 0 and 1, and
+max{s, m(π)} − f (π) is bounded away from zero outside these neighbourhoods.
+
+23
+
+un (π|κ1 , . . . , κN )
+
+[∫ ∞
+
+≥ (1 − π)C2 (s − µ1 )E0
+= (1 − π)C2 (s − µ1 )
+≥ πC2 (s − µ1 )
+
+∫ ∞
+
+]
+]
+[∫ ∞
+(1 − πt ) dt
+πt dt + πC2 (µ0 − s)E1
+
+0
+
+E0 [πt ] dt + πC2 (µ0 − s)
+
+0
+
+∫ ∞
+e
+
+η0 k0 t
+
+∫ ∞
+
+0
+
+E1 [1 − πt ] dt
+
+0
+
+(1 + C0′ t) dt + (1 − π)C2 (µ0 − s)
+
+∫ ∞
+
+0
+
+e−η1 k0 t (1 + C1′ t) dt
+
+0
+
+C ′ − η0 k0
+C ′ + η1 k0
+= πC2 (s − µ1 ) 0 2 2
++ (1 − π)C2 (µ0 − s) 1 2 2 .
+η0 k0
+η1 k0
+This is the desired result.
+Next, suppose that the Lévy measure ν1 , say, is not absolutely continuous with respect to
+ν0 . Take a ν0 -null set B ⊆ R\{0} with ν1 (B) > 0. In state ℓ = 1, we then have P1 [πt = 1] ≥
+1 − e−ν1 (B)t , so that
+E1 [1 − πt ] = P1 [πt = 1] · 0 + P1 [πt < 1] · E1 [1 − πt |πt < 1] ≤ P1 [πt < 1] ≤ e−ν1 (B)t .
+∫∞
+This exponential convergence again allows us to compute an upper bound for 0 E1 [1 − πt ] dt.
+Finally, if both Lévy measures are trivial, the inequality η0 < 0 < η1 holds trivially, and the
+result follows as above.
+
+Viscosity Solutions of the HJB Equation
+Consider a nonempty, open, connected and bounded set Ω ⊂ RL . Denote the set of all symmetric
+L × L matrices by SL . Let H ∈ C(Ω × RL × SL × R) satisfy
+H(x, p, X + Y, d) ≥ H(x, p, X, d + q)
+for all (x, p, X, d) ∈ Ω × RL × SL × R, all positive semidefinite Y ∈ SN and all q ≥ 0.30
+We are interested in solutions u : Ω → R of boundary value problems of the form
+H(x, Du, D2 u, u − M u) = 0
+u=v
+
+in Ω,
+
+(A.1)
+
+on ∂Ω,
+
+(A.2)
+
+where Du and D2 u are the gradient and the Hessian matrix of u, respectively, M is an operator
+mapping C(Ω) into itself, and v ∈ C(Ω).
+A function u ∈ C(Ω) is called a viscosity subsolution of (A.1) if for every ϕ ∈ C 2 (Ω) and
+every x0 ∈ Ω such that ϕ ≥ u on Ω and ϕ(x0 ) = u(x0 ),
+H(x0 , Dϕ(x0 ), D2 ϕ(x0 ), ϕ(x0 ) − M ϕ(x0 )) ≥ 0.
+Analogously, a function u ∈ C(Ω) is called a viscosity supersolution of (A.1) if for every ϕ ∈
+30
+
+Note that the variables X and Y just introduced are unrelated to the objects for which we use these
+symbols in the main text.
+
+24
+
+C 2 (Ω) and every x0 ∈ Ω such that ϕ ≤ u on Ω and ϕ(x0 ) = u(x0 ),
+H(x0 , Dϕ(x0 ), D2 ϕ(x0 ), ϕ(x0 ) − M ϕ(x0 )) ≤ 0.
+Finally, u ∈ C(Ω) is called a viscosity solution of (A.1) if it is a viscosity sub- and supersolution
+of (A.1).
+◦
+
+The HJB equation (1) and its reformulation (2) are both of the form (A.1) with Ω = ∆L ,
+the operator in question being
+M u(π) =
+
+1
+λ(π)
+
+∫
+u(j(π, h)) ν(π)(dh).
+R\{0}
+
+By the arguments that led us from (1) to (2) in Section 4, these equations have the same viscosity
+solutions. We will refer to either equation as the HJB equation in what follows.
+Suppose that all players except player n use the strategy κ† defined in (3). Let u∗ (·|κ†¬n )
+denote the value function of the control problem that player n faces when choosing a best
+response, and u(·|κ† , κ†¬n ) the player’s payoff function when she also uses strategy κ† , that is,
+† †
+u(π|κ , κ†¬n ) = E(κ ,κ¬n )
+
+†
+
+[∫ ∞ {
+]
+}
+†
+†
+[1 − κ (πt )]s + κ (πt )m(πt ) − f (πt ) dt π0 = π .
+0
+
+By definition, u∗ (·|κ†¬n ) ≥ u(·|κ† , κ†¬n ). We shall establish the converse inequality via a comparison result for viscosity sub- and supersolutions.
+We know that both functions are bounded. Assume for now that they are actually continuous
+on ∆L ; we will justify this assumption later. While the following result and its proof are standard,
+we include them for the sake of a self-contained treatment.
+Lemma A.2 The value function u∗ (·|κ†¬n ) is a viscosity subsolution of the HJB equation.
+Proof: We simplify the notation by writing u instead of u∗ (·|κ†¬n ).
+◦
+
+Consider ϕ ∈ C 2 (∆L ) and π0 ∈ ∆L such that u − ϕ ≤ 0 = u(π0 ) − ϕ(π0 ). To establish that
+u is a viscosity subsolution of (1), we must show that
+max
+k∈[0,1]
+
+{
+}
+(1 − k)s + km(π0 ) − f (π0 ) + [k0 + (N − 1)κ† (π0 ) + k]Gϕ(π0 ) ≥ 0.
+
+Suppose that this is not the case, so that
+(1 − k)s + km(π0 ) − f (π0 ) + [k0 + (N − 1)κ† (π0 ) + k]Gϕ(π0 ) < 0
+for all k ∈ [0, 1]. For ε > 0, define ψ ∈ C 2 (∆L ) by
+ψ(π) = ϕ(π) + ε∥π − π0 ∥4
+and note that ψ → ϕ uniformly as ε → 0. For δ > 0, let Bδ (π0 ) ⊂ RL be the open ball of radius
+◦
+
+δ centered at π0 . By continuity, we can find ε, δ > 0 such that Bδ (π0 ) ⊂ ∆L and
+(1 − k)s + km(π) − f (π) + [k0 + (N − 1)κ† (π) + k]Gψ(π) < 0
+
+25
+
+for all k ∈ [0, 1] and all π ∈ Bδ (π0 ). As π0 is a strict maximizer of u − ψ, moreover, there exists
+γ > 0 such that u(π) − ψ(π) ≤ −γ for π ∈ ∆L \ Bδ (π0 ). Suppose now that player n uses the
+strategy κ ∈ K against the other players’ common strategy κ† . Define τ = inf{t > 0 : ∥πt −π0 ∥ >
+†
+δ}. As k0 > 0, we have E(κ,κ¬n ) [τ ] < ∞ and
+]
+}
+[1 − κ(πt )]s + κ(πt )m(πt ) − f (πt ) dt + u(πτ ) − u(π0 )
+0
+[∫ τ
+]
+{
+}
+(κ,κ†¬n )
+≤ E
+[1 − κ(πt )]s + κ(πt )m(πt ) − f (πt ) dt + ψ(πτ ) − ψ(π0 ) − γ
+0
+[∫ τ {
+} ]
+(κ,κ†¬n )
+†
+= E
+[1 − κ(πt )]s + κ(πt )m(πt ) − f (πt ) + [k0 + (N − 1)κ (π) + κ(πt )]Gψ(πt ) dt − γ
+†
+
+E(κ,κ¬n )
+
+[∫ τ
+
+< −γ,
+
+{
+
+0
+
+where the equality in the third line follows from Dynkin’s formula. But this contradicts the
+dynamic programming principle, which states that
+(κ,κ†¬n )
+
+u(π0 ) = sup E
+
+[∫ τ
+
+κ∈K
+
+{
+
+]
+[1 − κ(πt )]s + κ(πt )m(πt ) − f (πt ) dt + u(πτ ) .
+}
+
+0
+
+Lemma A.3 The payoff function u(·|κ† , κ†¬n ) is a viscosity supersolution of the HJB equation.
+Proof: We simplify the notation by writing u instead of u(·|κ† , κ†¬n ).
+◦
+
+Consider ϕ ∈ C 2 (∆L ) and π0 ∈ ∆L such that u−ϕ ≥ 0 = u(π0 )−ϕ(π0 ). For any deterministic
+time τ > 0,
+[∫ τ {
+]
+}
+†
+†
+0 = E
+[1 − κ (πt )]s + κ (πt )m(πt ) − f (πt ) dt + u(πτ ) − u(π0 )
+0
+[∫ τ {
+]
+}
+† †
+≥ E(κ ,κ¬n )
+[1 − κ† (πt )]s + κ† (πt )m(πt ) − f (πt ) dt + ϕ(πτ ) − ϕ(π0 )
+[∫0 τ {
+} ]
+†
+†
+(κ ,κ¬n )
+†
+†
+†
+= E
+[1 − κ (πt )]s + κ (πt )m(πt ) − f (πt ) + [k0 + N κ (πt )]Gϕ(πt ) dt
+(κ† ,κ†¬n )
+
+0
+
+by Dynkin’s formula. Dividing through by τ and letting τ → 0, we get
+[1 − κ† (π0 )]s + κ† (π0 )m(π0 ) − f (π0 ) + [k0 + N κ† (π0 )]Gϕ(π0 ) ≤ 0,
+which is equivalent to
+[k0 + (N − 1)κ† (π0 )][s − m(π0 )] − [f (π0 ) − s]
+− [s − m(π0 )] + Gϕ(π0 ) ≤ 0.
+k0 + N κ† (π0 )
+As
+
+[k0 + (N − 1)κ† (π0 )][s − m(π0 )] − [f (π0 ) − s]
+,
+k0 + (N − 1)κ† (π0 ) + k
+k∈[0,1]
+
+κ† (π0 ) ∈ arg max
+
+u is thus a viscosity supersolution of (2).
+The comparison result that yields the inequality u∗ (·|κ†¬n ) ≤ u(·|κ† , κ†¬n ) is due to Ishii and
+Yamada (1993). These authors consider functional equations F (x, u, Du, D2 u, u−M u) = 0 such
+
+26
+
+that
+F (x, r, p, X + Y, d) ≤ F (x, r, p, X, d + q)
+for all (x, r, p, X, d) ∈ Ω × R × RL × SL × R, all positive semidefinite Y ∈ SN and all q ≥ 0. This
+means that F corresponds to −H here.31 As a consequence, the inequalities defining sub- and
+supersolutions in terms of F are the opposite of those in terms of H.
+There is a second, more substantive difference between the definitions of Ishii and Yamada
+(1993) and ours. Translated back into our setting, a function u ∈ C(Ω) is a viscosity subsolution
+of (A.1) in their sense if for every ϕ ∈ C 2 (Ω) and every x0 ∈ Ω such that ϕ − u has a local
+minimum in x0 ,
+H(x0 , Dϕ(x0 ), D2 ϕ(x0 ), u(x0 ) − M u(x0 )) ≥ 0.
+Analogously, a function u ∈ C(Ω) is a viscosity supersolution of (A.1) in their sense if for every
+ϕ ∈ C 2 (Ω) and every x0 ∈ Ω such that ϕ − u has a local maximum at x0 ,
+H(x0 , Dϕ(x0 ), D2 ϕ(x0 ), u(x0 ) − M u(x0 )) ≤ 0.
+In these alternative definitions, therefore, u is replaced by ϕ only as far as the gradient and
+Hessian are concerned, but not in the nonlocal term. When M is an integral operator of the
+type considered here, however, an argument in Alvarez and Tourin (1996, p. 300) implies that
+these definitions are in fact equivalent to ours.32
+Lemma A.4 Let a function v ∈ C(∂∆L ) be given. Suppose that u is a viscosity subsolution of
+the HJB equation, u a viscosity supersolution, and u ≤ v ≤ u on ∂∆L . Then u ≤ u on ∆L .
+Proof:
+◦
+
+Equation (2) takes the form assumed in Ishii and Yamada (1993) with the domain
+
+Ω = ∆L , the function
+F (x, p, X, d) = −
+where
+
+1
+R(x)′ XR(x) + L(x)′ p + λ(x)d − c(x)
+2σ 2
+
+
+
+
+x1 [ρ1 − ρ(x)]
+
+
+..
+,
+R(x) = 
+.
+
+
+xL [ρL − ρ(x)]
+
+
+
+
+x1 [λ1 − λ(x)]
+
+
+..
+
+L(x) = 
+.
+
+
+xL [λL − λ(x)]
+
+and
+c(x) =
+=
+
+[k0 + (N − 1)κ† (x)][s − m(x)] − [f (x) − s]
+− [s − m(x)]
+k0 + (N − 1)κ† (x) + k
+k∈[0,1]
+max
+
+[k0 + (N − 1)κ† (x)][s − m(x)] − [f (x) − s]
+− [s − m(x)],
+k0 + N κ† (x)
+
+31
+
+Note that Ishii and Yamada (1993) allow the value of the solution to enter as a separate variable
+besides its difference with the nonlocal operator. Because of the absence of discounting, this generality
+is not needed here, so H has one argument fewer.
+32
+See Azimzadeh, Bayraktar and Labahn (2018, Section 2) for a related discussion.
+
+27
+
+and the operator
+1
+M u(x) =
+λ(x)
+
+∫
+u(j(x, h)) ν(x)(dh).
+R\{0}
+
+It is straightforward to check that F , M and the function B(x, u) = u − v(x) defined on ∂∆L × R
+satisfy all the conditions imposed by Ishii and Yamada (1993). The result thus follows from their
+Theorem 3.1.
+Corollary A.1 u∗ (·|κ†¬n ) = u(·|κ† , κ†¬n ).
+Proof: The proof is by induction over the dimension of the faces of the simplex. The 0-faces
+(vertices) correspond to degenerate beliefs that assign probability 1 to one of the states; at all
+these vertices, both functions assume the value 0. An application of Lemma A.4 for L = 1 now
+yields u∗ (·|κ†¬n ) = u(·|κ† , κ†¬n ) along any 1-face (edge) of the simplex. Applying the lemma for
+L = 2 then proves this identity for all 2-faces (facets), and so on until the entire simplex is
+covered.
+It remains to justify our assumption that the functions u∗ (·|κ†¬n ) and u(·|κ† , κ†¬n ) are continuous. In fact, using upper semicontinuous and lower semicontinuous envelopes, Ishii and Yamada
+(1993) define the notion of viscosity sub- and supersolution for functions that are merely locally
+bounded. Lemmas A.2 and A.3 still hold then, and Lemma A.4 generalizes in a way that ensures
+that any viscosity solution satisfying a continuous boundary condition must be continuous overall; see Ishii and Yamada (1993, Corollary 3.3). Continuity of the functions in question follows
+from an iterative application of this result as in the proof of Corollary A.1.
+
+Verification that κ† ∈ K for Brownian Payoffs and Normal Prior
+From the main body of the text, for m < s we have
+I(π) = Φ(z) − 1 + z −1 ϕ(z)
+where z = (s − m)τ 1/2 .
+The function F (z) = Φ(z) − 1 + z −1 ϕ(z) is a strictly decreasing bijection from ]0, ∞[ to
+itself with first derivative F ′ (z) = −z −2 ϕ(z). For any positive real number c, therefore, we
+have I(π) = c if and only if (s − m)τ 1/2 = F −1 (c). At any such (m, τ ) in the half-plane
+Π = R × [τ0 , ∞[ , we have ∂I/∂m = −F ′ (F −1 (c)) τ 1/2 and ∂I/∂τ = 21 F ′ (F −1 (c))F −1 (c) τ −1 .
+To verify that κ† ∈ K, it suffices to show that Iτ −1 is Lipschitz continuous on Π(a, b) =
+{π ∈ Π : a ≤ I(π) ≤ b} for any positive real numbers a < b. For I(π) = c, we have ∂(Iτ −1 )/∂m =
+)
+(
+−F ′ (F −1 (c)) τ −1/2 and ∂(Iτ −1 )/∂τ = 21 F ′ (F −1 (c))F −1 (c) − c τ −2 . This establishes that both
+partial derivatives of Iτ −1 are bounded along any level curve I(π) = c in Π. Letting c range
+from a to b shows that they are bounded on the whole of Π(a, b), so Iτ −1 is indeed Lipschitz
+continuous there.
+
+28
+
+Verification that κ† ∈ K for Poisson Payoffs and Gamma Prior
+Again from the main body of the text, for m(π) = α/β < s we have
+I(π) =
+
+s G(s; α, β) − αβ G(s; α + 1, β)
+s − αβ
+
+− 1.
+
+We fix α as well as positive real numbers a < b. To verify that κ† ∈ K, it suffices to show that
+{
+}
+I(α, ·) is Lipschitz continuous on the set B(a, b) = β ∈ ] αs , ∞[ : a ≤ I(π) ≤ b . To this end, we
+note first that
+[
+]
+∫ s α
+β
+βµ
+α−1 −βµ
+G(s; α, β) − G(s; α + 1, β) =
+x
+e
+1−
+dµ.
+α
+0 Γ(α)
+For β = α/s and µ < s, the term in square brackets under the integral is positive, so we have
+G(s; α, αs )−G(s; α+1, αs ) > 0. For β ↘ αs , therefore, the numerator s G(s; α, β)− αβ G(s; α+1, β)
+in the above expression for I(π) tends to a positive limit. Given that I(π) is finite for β ∈ B(a, b),
+this implies that the denominator in the above expression must be bounded away from 0, i.e. β
+must be bounded away from α/s on B(a, b). Using the fact that
+∂G(s; α, β)
+α
+= [G(s; α, β) − G(s; α + 1, β)] ,
+∂β
+β
+it is now straightforward to verify that I(α, ·) has a bounded first derivative on B(a, b).
+
+29
+
+References
+Alvarez, O. and A. Tourin (1996): “Viscosity Solutions of Nonlinear Integro-Differential
+Equations,” Annales de l’Institut Henri Poincaré, 13, 293–317.
+Azimzadeh, P., E. Bayraktar and G. Labahn (2018): “Convergence of Implicit
+Schemes for Hamilton-Jacobi-Bellman Quasi-Variational Inequalities,” SIAM Journal on Control and Optimization, 56, 3994–4016.
+Bergemann, D. and J. Välimäki (1997): “Market Diffusion with Two-sided Learning,” RAND Journal of Economics, 28, 773–795.
+Bergemann, D. and J. Välimäki (2002): “Entry and Vertical Differentiation,” Journal
+of Economic Theory, 106, 91–125.
+Bergemann, D. and J. Välimäki (2008): “Bandit Problems,” in S. Durlauf and
+L. Blume (eds.), The New Palgrave Dictionary of Economics (Second Edition),
+Basingstoke and New York: Palgrave Macmillan.
+Blum, A. and Y. Mansour (2007): “Learning, Regret Minimization, and Equilibria,”
+in N. Nisan, T. Roughgarden, E. Tardos, V. Vazirani (eds.), Algorithmic Game
+Theory, pp. 79-102, Cambridge: Cambridge University Press.
+Bolton, P. and C. Harris (1999): “Strategic Experimentation,” Econometrica, 67,
+349–374.
+Bolton, P. and C. Harris (2000): “Strategic Experimentation: the Undiscounted
+Case,” in P.J. Hammond and G.D. Myles (eds.), Incentives, Organizations and
+Public Economics – Papers in Honour of Sir James Mirrlees, pp. 53–68, Oxford:
+Oxford University Press.
+Bonatti, A. (2011): “Menu Pricing and Learning,” American Economic Journal: Microeconomics, 3, 124–163.
+Bubeck, S. and N. Cesa-Bianchi (2012): “Regret Analysis of Stochastic and Nonstochastic Multi-Armed Bandit Problems,” Foundations and Trends in Machine
+Learning, 5, 1–122.
+Chernoff, H. (1968): “Optimal Stochastic Control,” Sankhyā, 30, 221–252.
+Cohen, A. and E. Solan (2013): “Bandit Problems with Lévy Payoff Processes,”
+Mathematics of Operations Research, 38, 92–107.
+DeGroot, M. (1970): Optimal Statistical Decisions. New York: McGraw Hill.
+Ding, Z. and I.O. Ryzhov (2016): “Optimal Learning with Non-Gaussian Rewards,”
+Advances in Applied Probability, 48, 112–136.
+Dutta, P.K. (1991): “What Do Discounted Optima Converge to?: A Theory of Discount
+Rate Asymptotics in Economic Models,” Journal of Economic Theory, 55, 64–94.
+Dynkin, E.B. (1965): Markov Processes, Vol. I. Berlin: Springer.
+Engelbert, H.J. and W. Schmidt (1984): “On One-Dimensional Stochastic Differential Equations with Generalized Drift,” in M. Métivier, E. Pardoux (eds.), Lecture
+Notes in Control and Information Sciences, vol. 69, pp. 143–155, Berlin: Springer.
+Harris, C. (1988): “Dynamic Competition for Market Share: An Undiscounted Model,”
+Discussion Paper No. 30, Nuffield College, Oxford.
+
+30
+
+Harris, C. (1993): “Generalized Solutions to Stochastic Differential Games in One Dimension,” Industry Studies Program Discussion Paper No. 44, Boston University.
+Hörner, J. and A. Skrzypacz (2016): “Learning, Experimentation and Information
+Design,” in B. Honoré, A. Pakes, M. Piazzesi, L. Samuelson (Eds.), Advances
+in Economics and Econometrics: Eleventh World Congress (Econometric Society
+Monographs), pp. 63-98, Cambridge: Cambridge University Press.
+Ishii, K. and N. Yamada (1993): “Viscosity Solutions of Nonlinear Second Order
+Elliptic PDEs Involving Nonlocal Operators,” Osaka Journal of Mathematics, 30,
+439–455.
+Jovanovic, B. (1979): “Job Matching and the Theory of Turnover,” Journal of Political
+Economy, 87, 972–990.
+Karatzas, I. and S.E. Shreve (1988): Brownian Motion and Stochastic Calculus.
+New York: Springer-Verlag.
+Ke, T.T. and J.M. Villas-Boas (2019): “Optimal Learning Before Choice,” Journal
+of Economic Theory, 180, 383–437.
+Keller, G. and S. Rady (1999): “Optimal Experimentation in a Changing Environment,” Review of Economic Studies, 66, 475–507.
+Keller, G. and S. Rady (2003): “Price Dispersion and Learning in a Dynamic
+Differentiated-Goods Duopoly,” RAND Journal of Economics, 34, 138–165.
+Keller, G. and S. Rady (2010): “Strategic Experimentation with Poisson Bandits,”
+Theoretical Economics, 5, 275–311.
+Keller, G. and S. Rady (2015): “Breakdowns,” Theoretical Economics, 10, 175–202.
+Keller, G., S. Rady and M. Cripps (2005): “Strategic Experimentation with Exponential Bandits,” Econometrica, 73, 39–68.
+Lai, T.L. (1987): “Adaptive Treatment Allocation and the Multi-Armed Bandit Problem,” Annals of Statistics, 15, 1091–1114.
+Liptser, R.S. and A.N. Shiryayev (1977): Statistics of Random Processes I. New
+York: Springer-Verlag.
+Moscarini, G. and F. Squintani (2010): “Competitive Experimentation with Private
+Information: The Survivor’s Curse,” Journal of Economic Theory, 145, 639–660.
+Øksendal, B. and A. Sulem (2007): Applied Stochastic Control of Jump Diffusions
+(2nd Edition). New York: Springer-Verlag.
+Peitz, M., S. Rady and P. Trepper (2017): “Experimentation in Two-Sided Markets,” Journal of the European Economic Association, 15, 128–172.
+Pham, H. (2009): Continuous-time Stochastic Control and Optimization with Financial
+Applications. New York: Springer-Verlag.
+Ramsey, F.P. (1928): “A Mathematical Theory of Savings,” Economic Journal, 38,
+543–559.
+Trotter, H.F. (1959): “On the Product of Semi-Groups of Operators,” Proceedings of
+the American Mathematical Society, 10, 545–551.
+Veronesi, P. (2000): “How Does Information Quality Affect Stock Returns?,” Journal
+of Finance, 55, 807–837.
+31
+
+

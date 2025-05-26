@@ -1,0 +1,85 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Module boundary -->
+  <rect x="50" y="50" width="700" height="400" rx="15" fill="#f0faf0" stroke="#40c040" stroke-width="3"/>
+  <text x="400" y="85" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">Inference Learning Module</text>
+
+  <!-- Input elements -->
+  <rect x="100" y="110" width="120" height="40" rx="5" fill="#d0e0ff" stroke="#4080ff" stroke-width="2"/>
+  <text x="160" y="135" font-family="Arial" font-size="14" text-anchor="middle">Observation o^i_t</text>
+  
+  <rect x="240" y="110" width="120" height="40" rx="5" fill="#d0e0ff" stroke="#4080ff" stroke-width="2"/>
+  <text x="300" y="135" font-family="Arial" font-size="14" text-anchor="middle">Joint Actions a_t</text>
+  
+  <rect x="380" y="110" width="120" height="40" rx="5" fill="#d0e0ff" stroke="#4080ff" stroke-width="2"/>
+  <text x="440" y="135" font-family="Arial" font-size="14" text-anchor="middle">Reward r^i_t</text>
+  
+  <rect x="520" y="110" width="120" height="40" rx="5" fill="#d0e0ff" stroke="#4080ff" stroke-width="2"/>
+  <text x="580" y="135" font-family="Arial" font-size="14" text-anchor="middle">Observation o^i_{t+1}</text>
+  
+  <!-- Previous latent state -->
+  <ellipse cx="160" cy="220" rx="80" ry="40" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+  <text x="160" y="215" font-family="Arial" font-size="14" text-anchor="middle">Previous Latent</text>
+  <text x="160" y="235" font-family="Arial" font-size="14" text-anchor="middle">z^{-i}_t</text>
+  
+  <!-- Encoder Network -->
+  <rect x="280" y="180" width="240" height="80" rx="10" fill="#d0ffe0" stroke="#40c040" stroke-width="2"/>
+  <text x="400" y="210" font-family="Arial" font-size="16" text-anchor="middle">Encoder Network</text>
+  <text x="400" y="230" font-family="Arial" font-size="12" text-anchor="middle">p(z^{-i}_{t+1}|z^{-i}_t,τ^i_t;φ^i_{enc})</text>
+  <text x="400" y="250" font-family="Arial" font-size="12" text-anchor="middle">MLP with Gaussian Output</text>
+  
+  <!-- New latent state -->
+  <ellipse cx="640" cy="220" rx="80" ry="40" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+  <text x="640" y="215" font-family="Arial" font-size="14" text-anchor="middle">New Latent</text>
+  <text x="640" y="235" font-family="Arial" font-size="14" text-anchor="middle">z^{-i}_{t+1}</text>
+  
+  <!-- Decoder Network -->
+  <rect x="280" y="310" width="240" height="80" rx="10" fill="#d0ffe0" stroke="#40c040" stroke-width="2"/>
+  <text x="400" y="340" font-family="Arial" font-size="16" text-anchor="middle">Decoder Network</text>
+  <text x="400" y="360" font-family="Arial" font-size="12" text-anchor="middle">p(a^{-i}_t|o^i_t,z^{-i}_t;φ^i_{dec})</text>
+  <text x="400" y="380" font-family="Arial" font-size="12" text-anchor="middle">MLP with Action Distribution Output</text>
+  
+  <!-- Predicted actions -->
+  <rect x="580" y="330" width="120" height="40" rx="5" fill="#ffe0d0" stroke="#ff8040" stroke-width="2"/>
+  <text x="640" y="355" font-family="Arial" font-size="14" text-anchor="middle">Predicted a^{-i}_t</text>
+  
+  <!-- Connections -->
+  <!-- Inputs to Encoder -->
+  <path d="M160 150 L280 190" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M300 150 L320 180" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M440 150 L400 180" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M580 150 L510 180" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Previous latent to Encoder -->
+  <path d="M240 220 L280 220" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Encoder to New latent -->
+  <path d="M520 220 L560 220" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Previous latent to Decoder -->
+  <path d="M160 260 C160 290 220 330 280 340" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Observation to Decoder -->
+  <path d="M160 150 C100 200 100 300 280 320" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Decoder to Predicted actions -->
+  <path d="M520 340 L580 350" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- ELBO Loss -->
+  <rect x="280" y="420" width="240" height="30" rx="5" fill="#ffe0e0" stroke="#ff4040" stroke-width="2"/>
+  <text x="400" y="440" font-family="Arial" font-size="14" text-anchor="middle">ELBO Loss Optimization</text>
+  
+  <!-- Loss connections -->
+  <path d="M640 370 C640 400 400 400 400 420" stroke="#ff4040" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow2)"/>
+  <path d="M640 260 C700 300 600 395 420 420" stroke="#ff4040" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow2)"/>
+  
+  <!-- Markers -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff4040"/>
+    </marker>
+  </defs>

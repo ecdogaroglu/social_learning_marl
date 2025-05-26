@@ -1,0 +1,110 @@
+% LaTeX Figure Positioning Guide to Prevent Blank Spaces
+% =====================================================
+
+% 1. FIGURE PLACEMENT OPTIONS
+% ---------------------------
+% Replace [H] with [!htbp] for better flexibility:
+% ! = Override LaTeX's internal parameters
+% h = Try to place here (at the current position)
+% t = Try to place at top of page
+% b = Try to place at bottom of page  
+% p = Try to place on a separate page for floats
+
+% AVOID: [H] - Forces exact placement but can create large blank spaces
+% USE: [!htbp] - Gives LaTeX flexibility to find the best position
+
+% 2. ADDITIONAL PACKAGES TO ADD TO PREAMBLE
+% ------------------------------------------
+\usepackage{placeins}  % Provides \FloatBarrier command
+\usepackage{afterpage} % Provides \afterpage command for better control
+
+% 3. SPACING ADJUSTMENTS
+% ----------------------
+% Reduce excessive vertical spacing in multi-part figures:
+\vspace{0.3cm}  % Instead of \vspace{0.5cm} or larger
+
+% Control spacing around figures:
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}     % Space between floats and text
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}          % Space between floats
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}        % Space around in-text floats
+
+% 4. FLOAT BARRIER USAGE
+% ----------------------
+% Use \FloatBarrier before important section breaks to prevent figures from floating too far:
+\FloatBarrier
+\section{New Section}
+
+% 5. ALTERNATIVE APPROACHES FOR PROBLEMATIC FIGURES
+% -------------------------------------------------
+
+% Option A: Use \afterpage for large figures
+\afterpage{
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=\textwidth]{figure.png}
+        \caption{Caption text}
+        \label{fig:label}
+    \end{figure}
+}
+
+% Option B: Use minipage for better control of multi-part figures
+\begin{figure}[!htbp]
+    \centering
+    \begin{minipage}{\textwidth}
+        \centering
+        \begin{minipage}[t]{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{fig1.png}
+            \subcaption{Caption 1}
+        \end{minipage}
+        \hfill
+        \begin{minipage}[t]{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{fig2.png}
+            \subcaption{Caption 2}
+        \end{minipage}
+    \end{minipage}
+    \caption{Main caption}
+\end{figure}
+
+% Option C: For very large figures, consider using landscape orientation
+\usepackage{pdflscape}
+\begin{landscape}
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=\textwidth]{large_figure.png}
+        \caption{Large figure caption}
+    \end{figure}
+\end{landscape}
+
+% 6. DEBUGGING BLANK SPACES
+% -------------------------
+% Add this to preamble to see float placement in draft mode:
+\usepackage[draft]{graphicx}  % Shows boxes instead of images for faster compilation
+\usepackage{showframe}        % Shows page margins and text blocks
+
+% 7. BEST PRACTICES SUMMARY
+% -------------------------
+% - Always use [!htbp] instead of [H]
+% - Add \FloatBarrier before major section breaks
+% - Reduce excessive \vspace in multi-part figures
+% - Consider text flow when placing multiple figures
+% - Use \afterpage for figures that must appear after current page
+% - Test compilation frequently to catch spacing issues early
+% - Consider breaking very large multi-part figures into separate figures
+
+% 8. EMERGENCY FIXES
+% ------------------
+% If you still get blank spaces, try these in order:
+
+% Fix 1: Add \raggedbottom to preamble (allows variable page heights)
+\raggedbottom
+
+% Fix 2: Increase float placement parameters
+\renewcommand{\topfraction}{0.9}        % Max fraction of page for top floats
+\renewcommand{\bottomfraction}{0.8}     % Max fraction of page for bottom floats  
+\renewcommand{\textfraction}{0.1}       % Min fraction of page for text
+\renewcommand{\floatpagefraction}{0.8}  % Min fraction of float page that must be floats
+
+% Fix 3: For desperate cases, use \clearpage to force page break
+\clearpage  % Forces all pending floats to be placed before continuing 

@@ -1,0 +1,322 @@
+\section{Lévy Process Discretization}
+\label{appendix:levy_discretization}
+
+This appendix provides a comprehensive mathematical treatment of the discretization of Lévy processes for implementing strategic experimentation models within our Partially Observable Active Markov Game framework. We establish rigorous theoretical foundations for the numerical approximation schemes used in our implementation and analyze their convergence properties and preservation of strategic incentives.
+
+\subsection{Mathematical Foundations of Lévy Processes}
+\label{appendix:levy_foundations}
+
+Lévy processes form a fundamental class of stochastic processes that include Brownian motion and Poisson processes as special cases. They are characterized by stationary and independent increments, serving as the natural continuous-time generalization of random walks.
+
+\begin{definition}[Lévy Process]
+A stochastic process $X = \{X_t : t \geq 0\}$ on $\mathbb{R}^d$ with $X_0 = 0$ almost surely is a Lévy process if:
+\begin{enumerate}
+    \item It has independent increments: for any $0 \leq t_1 < t_2 < \cdots < t_n < \infty$, the random variables $X_{t_2} - X_{t_1}, X_{t_3} - X_{t_2}, \ldots, X_{t_n} - X_{t_{n-1}}$ are mutually independent.
+    \item It has stationary increments: for any $s < t$, the distribution of $X_t - X_s$ depends only on $t-s$.
+    \item It is stochastically continuous: for any $t \geq 0$ and $\varepsilon > 0$, $\lim_{h \to 0} \mathbb{P}(|X_{t+h} - X_t| > \varepsilon) = 0$.
+\end{enumerate}
+\end{definition}
+
+The celebrated Lévy-Khintchine formula provides a complete characterization of Lévy processes through their characteristic functions:
+
+\begin{theorem}[Lévy-Khintchine Formula]
+\label{thm:levy_khintchine}
+If $X = \{X_t : t \geq 0\}$ is a Lévy process, then its characteristic function has the form:
+\begin{equation}
+    \mathbb{E}[e^{i\theta X_t}] = e^{t\psi(\theta)}
+\end{equation}
+where 
+\begin{equation}
+    \psi(\theta) = ia\theta - \frac{1}{2}\sigma^2\theta^2 + \int_{\mathbb{R}\setminus\{0\}} (e^{i\theta x} - 1 - i\theta x\mathbf{1}_{|x|<1})\nu(dx)
+\end{equation}
+for some $a \in \mathbb{R}$, $\sigma \geq 0$, and a measure $\nu$ on $\mathbb{R}\setminus\{0\}$ satisfying $\int_{\mathbb{R}\setminus\{0\}} \min(1, x^2)\nu(dx) < \infty$.
+\citep{sato1999levy}
+\end{theorem}
+
+The triplet $(a, \sigma^2, \nu)$ is called the Lévy-Khintchine triplet or the characteristics of the Lévy process. Here, $a$ represents a drift term, $\sigma^2$ parametrizes the continuous Gaussian component, and $\nu$ is the Lévy measure characterizing the jump behavior.
+
+\begin{theorem}[Lévy-Itô Decomposition]
+\label{thm:levy_ito}
+Any Lévy process $X_t$ can be decomposed as:
+\begin{equation}
+    X_t = at + \sigma W_t + \int_{|x|<1} x (\tilde{N}(t, dx) - t\nu(dx)) + \int_{|x|\geq 1} x N(t, dx)
+\end{equation}
+where $W_t$ is a standard Brownian motion, $N(t, A)$ counts the number of jumps of size in set $A$ occurring up to time $t$, and $\tilde{N}(t, dx) = N(t, dx) - t\nu(dx)$ is the compensated Poisson random measure.
+\citep{applebaum2009levy}
+\end{theorem}
+
+The Lévy-Itô decomposition provides a pathwise representation of a Lévy process as the sum of a drift term, a Brownian motion, and potentially infinitely many jumps, both small and large.
+
+\subsection{Time Discretization of Lévy Processes}
+\label{appendix:levy_discretization_methods}
+
+To implement continuous-time Lévy processes within discrete computational frameworks, we must employ appropriate numerical approximation schemes. For our strategic experimentation model, we adopt the Euler-Maruyama scheme, extended to accommodate the jump components of general Lévy processes.
+
+\begin{definition}[Euler-Maruyama Scheme for Lévy Processes]
+Given a Lévy process $X_t$ with characteristics $(a, \sigma^2, \nu)$ and a discretization time step $\Delta t$, the Euler-Maruyama approximation constructs a discrete-time process $\{X_{t_n}\}_{n=0}^N$ where $t_n = n\Delta t$ through the recursive relation:
+\begin{equation}
+    X_{t_{n+1}} = X_{t_n} + a\Delta t + \sigma\sqrt{\Delta t}Z_n + \Delta J_n
+\end{equation}
+where $Z_n \sim \mathcal{N}(0,1)$ are independent standard normal random variables and $\Delta J_n$ represents the jump increment over $[t_n, t_{n+1}]$.
+\end{definition}
+
+For practical implementation, the jump component $\Delta J_n$ requires careful consideration, especially when the Lévy measure potentially assigns infinite mass to small jumps.
+
+\begin{proposition}[Approximation of Jump Component]
+The jump component $\Delta J_n$ can be approximated through one of the following approaches:
+\begin{enumerate}
+    \item For finite-activity processes (where $\nu(\mathbb{R}) < \infty$):
+    \begin{equation}
+        \Delta J_n = \sum_{i=1}^{K_n} J_i
+    \end{equation}
+    where $K_n \sim \text{Poisson}(\nu(\mathbb{R})\Delta t)$ and $J_i$ are i.i.d. random variables with distribution $\frac{\nu(dx)}{\nu(\mathbb{R})}$.
+    
+    \item For infinite-activity processes, a truncation approach:
+    \begin{equation}
+        \Delta J_n = \sum_{i=1}^{K^{\varepsilon}_n} J^{\varepsilon}_i + c_{\varepsilon}\Delta t
+    \end{equation}
+    where $K^{\varepsilon}_n \sim \text{Poisson}(\nu(\{x: |x| > \varepsilon\})\Delta t)$, $J^{\varepsilon}_i$ are i.i.d. with distribution $\frac{\nu(dx)\mathbf{1}_{|x|>\varepsilon}}{\nu(\{x: |x| > \varepsilon\})}$, and $c_{\varepsilon} = \int_{|x|\leq\varepsilon} x\nu(dx)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{theorem}[Convergence of Euler-Maruyama Scheme]
+\label{thm:euler_maruyama_convergence}
+Let $X_t$ be a Lévy process and $\hat{X}_t$ be its Euler-Maruyama approximation with time step $\Delta t$. Then for any fixed $T > 0$:
+\begin{enumerate}
+    \item (Weak Convergence) For any smooth function $f$ with polynomial growth:
+    \begin{equation}
+        |\mathbb{E}[f(X_T)] - \mathbb{E}[f(\hat{X}_T)]| \leq C\Delta t
+    \end{equation}
+    
+    \item (Strong Convergence) If $\int_{|x|>1} |x|^2 \nu(dx) < \infty$, then:
+    \begin{equation}
+        \mathbb{E}[\sup_{0\leq t\leq T} |X_t - \hat{X}_t|^2] \leq C\Delta t
+    \end{equation}
+\end{enumerate}
+where $C$ is a constant depending on $T$ and the characteristics of the Lévy process.
+\citep{protter2005stochastic, platen2010numerical}
+\end{theorem}
+
+The weak and strong convergence properties ensure that our numerical scheme accurately approximates both the distributional properties and pathwise behavior of the continuous-time process as the time step decreases.
+
+\subsection{Implementing Strategic Experimentation Models}
+\label{appendix:strategic_experimentation_implementation}
+
+In our implementation of the strategic experimentation model from \citet{keller2020undiscounted}, we must discretize both the background signal process $B_t$ and the individual payoff processes $X^i_t$, while preserving the strategic incentives that drive experimentation decisions.
+
+\subsubsection{Discretization of Diffusion-Poisson Processes}
+\label{appendix:discretization_diffusion_poisson}
+
+In the original model, both $B_t$ and $X^i_t$ follow Lévy processes that combine continuous diffusion and discrete jumps \citep{applebaum2009levy}:
+
+\begin{align}
+    dB_t &= \beta_s dt + \sigma_B dW^B_t + dC^B_t \\
+    dX^i_t &= \alpha_s dt + \sigma dW^i_t + dC^i_t
+\end{align}
+
+where $W^B_t$ and $W^i_t$ are standard Brownian motions, and $C^B_t$ and $C^i_t$ are compound Poisson processes. Using the Euler-Maruyama scheme \citep{higham2001algorithmic, kloeden1992numerical}, we discretize these continuous-time stochastic differential equations:
+
+\begin{align}
+    B_{t+\Delta t} - B_t &= \beta_s \Delta t + \sigma_B (W^B_{t+\Delta t} - W^B_t) + (C^B_{t+\Delta t} - C^B_t) \\
+    X^i_{t+\Delta t} - X^i_t &= \alpha_s \Delta t + \sigma (W^i_{t+\Delta t} - W^i_t) + (C^i_{t+\Delta t} - C^i_t)
+\end{align}
+
+For implementation, we denote these increments as:
+
+\begin{align}
+    B_{t-1:t} &= \beta_s \Delta t + \sigma_B (W^B_t - W^B_{t-1}) + \Delta N^B_t \\
+    X^i_{t-1:t} &= \alpha_s \Delta t + \sigma (W^i_t - W^i_{t-1}) + \Delta N^i_t
+\end{align}
+
+where $(W^B_t - W^B_{t-1}) \sim \mathcal{N}(0, \Delta t)$, $(W^i_t - W^i_{t-1}) \sim \mathcal{N}(0, \Delta t)$, and $\Delta N^B_t$, $\Delta N^i_t$ are the increments of the compound Poisson processes over the interval $[t-1, t]$.
+
+\subsubsection{Reward Function Equivalence}
+\label{appendix:reward_equivalence}
+
+A critical challenge in our implementation is reconciling the time-dependent nature of continuous-time rewards with the time-independent reward structure required by the POAMG framework. In the original continuous-time model, agents' instantaneous rewards are:
+
+\begin{equation}
+    dR^i_t = (1-a^i_t)s dt + a^i_t dX^i_t
+\end{equation}
+
+where $a^i_t \in [0,1]$ is the allocation to the risky arm and $s$ is the safe arm's deterministic flow payoff.
+
+To translate this structure into the POAMG framework, we need a reward function $R^i(s, a^i)$ that depends only on the state and action, not explicitly on time. We achieve this through a normalization approach:
+
+\begin{equation}
+    R^i(s, a^i) = (1-a^i)s + a^i \frac{X^i_{t-1:t}}{\Delta t}
+\end{equation}
+
+This transformation preserves the incentive structure of the original model while eliminating explicit time dependence. The following proposition establishes this equivalence formally:
+
+\begin{proposition}[Reward Equivalence]
+As $\Delta t \to 0$, the expected value of the discrete-time reward function $R^i(s, a^i)$ converges to the expected instantaneous flow payoff in the continuous-time model. Specifically:
+\begin{equation}
+    \lim_{\Delta t \to 0} \mathbb{E}[R^i(s, a^i)] = (1-a^i)s + a^i\mathbb{E}[\alpha_s + \lambda_s\mu_s]
+\end{equation}
+where $\lambda_s$ is the jump intensity and $\mu_s$ is the mean jump size of the compound Poisson process component of $X^i_t$ in state $s$.
+\end{proposition}
+
+\begin{proof}
+The expected value of the discrete-time reward function is:
+\begin{align}
+    \mathbb{E}[R^i(s, a^i)] &= (1-a^i)s + a^i\mathbb{E}\left[\frac{X^i_{t-1:t}}{\Delta t}\right] \\
+    &= (1-a^i)s + a^i\frac{\mathbb{E}[\alpha_s \Delta t + \sigma(W^i_t - W^i_{t-1}) + \Delta N^i_t]}{\Delta t} \\
+    &= (1-a^i)s + a^i\left(\alpha_s + \frac{\mathbb{E}[\Delta N^i_t]}{\Delta t}\right)
+\end{align}
+
+Since $\mathbb{E}[W^i_t - W^i_{t-1}] = 0$ and $\mathbb{E}[\Delta N^i_t] = \lambda_s\mu_s\Delta t$, where $\lambda_s$ is the jump intensity and $\mu_s$ is the mean jump size, we have:
+
+\begin{align}
+    \mathbb{E}[R^i(s, a^i)] &= (1-a^i)s + a^i\left(\alpha_s + \frac{\lambda_s\mu_s\Delta t}{\Delta t}\right) \\
+    &= (1-a^i)s + a^i(\alpha_s + \lambda_s\mu_s)
+\end{align}
+
+This exactly matches the expected instantaneous flow payoff in the continuous-time model.
+\end{proof}
+
+\subsubsection{Preservation of Strategic Incentives}
+\label{appendix:strategic_incentives}
+
+Beyond matching expected rewards, we must ensure that our discretization preserves the strategic incentives that drive experimentation decisions. The key strategic consideration in the model is the trade-off between exploitation (choosing the safe arm) and exploration (choosing the risky arm to learn about its quality).
+
+\begin{proposition}[Preservation of Strategic Incentives]
+The discrete-time reward function $R^i(s, a^i)$ preserves the strategic incentives of the continuous-time model in the following sense:
+\begin{enumerate}
+    \item The optimal policy in the discrete-time model converges to the optimal policy in the continuous-time model as $\Delta t \to 0$.
+    \item The incentive to experiment, measured by the difference in value between exploration and exploitation, is preserved up to $O(\Delta t)$ error terms.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+In the strategic experimentation model, the incentive to experiment at a given belief $b$ about the state is characterized by:
+\begin{equation}
+    I(b) = \frac{f(b) - s}{s - m(b)}
+\end{equation}
+when $m(b) < s$, and $I(b) = \infty$ otherwise, where $f(b)$ is the expected flow payoff of the risky arm and $m(b)$ is the expected flow payoff when the risky arm is bad.
+
+In our discrete-time approximation, the corresponding incentive is:
+\begin{equation}
+    \hat{I}(b) = \frac{\hat{f}(b) - s}{s - \hat{m}(b)}
+\end{equation}
+where $\hat{f}(b)$ and $\hat{m}(b)$ are the discrete-time analogs.
+
+Let us elaborate on why $\hat{f}(b) \to f(b)$ and $\hat{m}(b) \to m(b)$ as $\Delta t \to 0$. In the continuous-time model, the expected flow payoff of the risky arm at belief $b$ is:
+\begin{equation}
+    f(b) = b f_1 + (1-b) f_0
+\end{equation}
+where $f_1 = \alpha_1 + \lambda_1\mu_1$ is the expected flow in the good state and $f_0 = \alpha_0 + \lambda_0\mu_0$ is the expected flow in the bad state, with $m(b) = f_0$.
+
+In our discrete-time approximation, we have:
+\begin{equation}
+    \hat{f}(b) = b \hat{f}_1 + (1-b) \hat{f}_0
+\end{equation}
+where $\hat{f}_1$ and $\hat{f}_0$ are the expected rewards in the good and bad states, respectively.
+
+From our reward equivalence result (Proposition 3.1), we know that:
+\begin{align}
+    \hat{f}_1 &= \mathbb{E}\left[\frac{X^i_{t-1:t}}{\Delta t} \mid \text{good state}\right] = \alpha_1 + \frac{\mathbb{E}[\sigma(W^i_t - W^i_{t-1}) + \Delta N^i_t \mid \text{good state}]}{\Delta t} \\
+    &= \alpha_1 + \frac{\lambda_1\mu_1\Delta t}{\Delta t} + \frac{\mathbb{E}[\sigma(W^i_t - W^i_{t-1})]}{\Delta t}
+\end{align}
+
+The Brownian motion term has $\mathbb{E}[\sigma(W^i_t - W^i_{t-1})] = 0$ and $\text{Var}[\sigma(W^i_t - W^i_{t-1})] = \sigma^2 \Delta t$. By the martingale property of Brownian motion, this term contributes zero to the expected value but introduces variance of order $O(\Delta t)$. Thus:
+\begin{equation}
+    \hat{f}_1 = \alpha_1 + \lambda_1\mu_1 + O(\Delta t) \to f_1 \text{ as } \Delta t \to 0
+\end{equation}
+
+Similarly, $\hat{f}_0 = \alpha_0 + \lambda_0\mu_0 + O(\Delta t) \to f_0 \text{ as } \Delta t \to 0$, and consequently $\hat{m}(b) = \hat{f}_0 \to m(b) = f_0$.
+
+Therefore, we can establish that:
+\begin{equation}
+    \hat{I}(b) = \frac{\hat{f}(b) - s}{s - \hat{m}(b)} = \frac{b \hat{f}_1 + (1-b) \hat{f}_0 - s}{s - \hat{f}_0} = \frac{b(\hat{f}_1 - \hat{f}_0) + \hat{f}_0 - s}{s - \hat{f}_0}
+\end{equation}
+
+As $\Delta t \to 0$, we have $\hat{f}_1 \to f_1$, $\hat{f}_0 \to f_0$, and consequently:
+\begin{equation}
+    \hat{I}(b) \to \frac{b(f_1 - f_0) + f_0 - s}{s - f_0} = \frac{b f_1 + (1-b) f_0 - s}{s - f_0} = \frac{f(b) - s}{s - m(b)} = I(b)
+\end{equation}
+
+The convergence of incentives directly implies convergence of optimal policies. In the continuous-time model, the symmetric Markov perfect equilibrium characterized in \citet{keller2020undiscounted} has the form:
+\begin{equation}
+\kappa^*(b) = 
+\begin{cases}
+0 & \text{if } I(b) \leq k_0, \\
+\frac{I(b)-k_0}{N-1} & \text{if } k_0 < I(b) < k_0 + N - 1, \\
+1 & \text{if } I(b) \geq k_0 + N - 1.
+\end{cases}
+\end{equation}
+where $k_0$ is a threshold determined by the model parameters and $N$ is the number of players.
+
+The discrete-time counterpart $\hat{\kappa}^*(b)$ takes the same form but with $\hat{I}(b)$ in place of $I(b)$:
+\begin{equation}
+\hat{\kappa}^*(b) = 
+\begin{cases}
+0 & \text{if } \hat{I}(b) \leq k_0, \\
+\frac{\hat{I}(b)-k_0}{N-1} & \text{if } k_0 < \hat{I}(b) < k_0 + N - 1, \\
+1 & \text{if } \hat{I}(b) \geq k_0 + N - 1.
+\end{cases}
+\end{equation}
+
+To quantify the convergence rate, note that for any belief $b$, the error in the incentive function is:
+\begin{equation}
+    |\hat{I}(b) - I(b)| = \left|\frac{\hat{f}(b) - s}{s - \hat{m}(b)} - \frac{f(b) - s}{s - m(b)}\right|
+\end{equation}
+
+With some algebraic manipulation, we get:
+\begin{equation}
+    |\hat{I}(b) - I(b)| = \left|\frac{(s - m(b))(\hat{f}(b) - s) - (s - \hat{m}(b))(f(b) - s)}{(s - \hat{m}(b))(s - m(b))}\right|
+\end{equation}
+
+Expanding the numerator:
+\begin{align}
+    &(s - m(b))(\hat{f}(b) - s) - (s - \hat{m}(b))(f(b) - s) \\
+    &= (s - m(b))\hat{f}(b) - (s - m(b))s - (s - \hat{m}(b))f(b) + (s - \hat{m}(b))s \\
+    &= (s - m(b))\hat{f}(b) - (s - \hat{m}(b))f(b) + (\hat{m}(b) - m(b))s \\
+    &= s(\hat{f}(b) - f(b)) - m(b)\hat{f}(b) + \hat{m}(b)f(b) + (\hat{m}(b) - m(b))s \\
+    &= s(\hat{f}(b) - f(b)) - m(b)\hat{f}(b) + \hat{m}(b)f(b) + \hat{m}(b)s - m(b)s \\
+    &= s(\hat{f}(b) - f(b)) + \hat{m}(b)(f(b) + s) - m(b)(\hat{f}(b) + s)
+\end{align}
+
+Given that $|\hat{f}(b) - f(b)| = O(\Delta t)$ and $|\hat{m}(b) - m(b)| = O(\Delta t)$, we have:
+\begin{equation}
+    |\hat{I}(b) - I(b)| = O(\Delta t)
+\end{equation}
+
+This implies that the error in the incentive function decreases linearly with the time step, and consequently, the difference between the optimal policies $|\hat{\kappa}^*(b) - \kappa^*(b)|$ is also of order $O(\Delta t)$.
+
+Therefore, as $\Delta t \to 0$, the strategic incentives and optimal policies in our discrete-time approximation converge to those of the original continuous-time model at a rate of $O(\Delta t)$.
+\end{proof}
+
+\subsection{Relation to Policy-Invariant Reward Transformations}
+\label{appendix:policy_invariance}
+
+Our approach to time-independent reward formulation can be viewed through the lens of policy-invariant reward transformations, as developed in the reinforcement learning literature by \citet{ng1999policy}.
+
+\begin{definition}[Potential-Based Reward Shaping]
+A reward transformation $\tilde{R}(s, a, s') = R(s, a, s') + F(s, s')$ is potential-based if there exists a potential function $\Phi: S \to \mathbb{R}$ such that $F(s, s') = \gamma\Phi(s') - \Phi(s)$ for all $s, s' \in S$, where $\gamma$ is a discount factor.
+\end{definition}
+
+\begin{theorem}[Ng-Harada-Russell \citep{ng1999policy}]
+If a reward transformation is potential-based, then the optimal policy under the transformed reward function is also optimal under the original reward function, and vice versa.
+\end{theorem}
+
+While our transformation does not directly fit the potential-based formulation (since we're normalizing by $\Delta t$ rather than adding a potential difference), it shares the crucial property of preserving optimal policies. The following result establishes this connection:
+
+\begin{proposition}[Connection to Policy-Invariant Transformations]
+The transformation from time-dependent rewards in the continuous-time model to time-independent rewards in the POAMG framework preserves policy optimality in the limit as $\Delta t \to 0$.
+\end{proposition}
+
+\begin{proof}
+The original cumulative reward over a time interval $[0, T]$ is:
+\begin{equation}
+    \int_0^T [(1-a^i_t)s + a^i_t\alpha_s] dt + \int_0^T a^i_t \sigma dW^i_t + \int_0^T a^i_t dC^i_t
+\end{equation}
+
+The discretized cumulative reward is:
+\begin{equation}
+    \sum_{k=0}^{N-1} \Delta t \left[(1-a^i_{t_k})s + a^i_{t_k}\frac{X^i_{t_k:t_{k+1}}}{\Delta t}\right] = \sum_{k=0}^{N-1} [(1-a^i_{t_k})s\Delta t + a^i_{t_k}X^i_{t_k:t_{k+1}}]
+\end{equation}
+where $N = T/\Delta t$ and $t_k = k\Delta t$.
+
+As $\Delta t \to 0$ and $N \to \infty$ with $N\Delta t = T$ fixed, the discretized sum converges to the continuous-time integral. Since both formulations yield the same expected cumulative reward in the limit, they induce the same optimal policies.
+\end{proof}

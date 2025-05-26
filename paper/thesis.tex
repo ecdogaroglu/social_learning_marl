@@ -1,0 +1,209 @@
+\documentclass[a4paper,12pt]{report}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins according to Bonn University guidelines
+\usepackage[a4paper,top=2cm,bottom=2cm,left=3cm,right=2cm]{geometry}
+
+%% Font settings - Times New Roman or similar (as per guidelines)
+\usepackage{times} % Times font
+\usepackage{mathptmx} % Times font with math support
+
+%% Section formatting
+\usepackage{titlesec}
+
+% Traditional academic chapter title style
+\titleformat{\chapter}[display]
+  {\normalfont\Large\bfseries}
+  {}
+  {0pt}
+  {\thispagestyle{empty}%
+   \vspace*{-20pt}%
+   \begin{flushright}
+     % Elegant, academic chapter number
+     \begin{tikzpicture}[remember picture, overlay]
+       \node[text=black!12, font=\fontsize{80}{80}\selectfont] {\thechapter};
+     \end{tikzpicture}
+   \end{flushright}
+   \vspace{-60pt}
+   % Simple, elegant single line
+   \rule{\textwidth}{0.6pt}\\
+   \vspace*{15pt}
+   \raggedright\LARGE\scshape}
+  [\vspace{-0.8cm}]
+\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+
+% Elegant section formatting
+\titleformat{\section}
+  {\normalfont\Large\bfseries\scshape}
+  {}
+  {0pt}
+  {\thesection\quad}
+\titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+% Make subsections italic and elegant
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\itshape}
+  {\thesubsection}
+  {1em}
+  {}
+\titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+%% Line spacing 1.5 as required
+\usepackage{setspace}
+\onehalfspacing
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}         % For bold symbols
+\usepackage{graphicx}
+\usepackage{float}      % For [H] figure placement
+\usepackage{booktabs}
+\usepackage{tabu}
+\usepackage{enumitem}
+\usepackage[table,dvipsnames]{xcolor}  % Added dvipsnames option for more color choices
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{amsthm}
+\usepackage{bbm}        % Blackboard math symbols (for indicator function)
+\usepackage[toc]{appendix}
+\usepackage{subcaption}
+
+% Choose either algorithm2e OR algorithmicx, not both
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+% For adjusting margins of specific sections
+\usepackage{changepage}
+
+% Bibliography
+\usepackage[natbibapa]{apacite}
+
+% Todo notes
+\usepackage[colorinlistoftodos]{todonotes}
+
+% Page numbering configuration
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% Hyperref should be last
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+% Allow floating content to be placed more liberally
+\renewcommand{\floatpagefraction}{.9}
+\renewcommand{\textfraction}{.1}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{.9}
+
+% Appendix formatting
+\makeatletter
+\let\old@chapter\@chapter
+\def\@chapter[#1]#2{\old@chapter[{#1}]{#2}}
+\makeatother
+
+% Math operators
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% Custom theorem environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{remark}{Remark}
+
+% Define indicator function notation
+\newcommand{\ind}[1]{\mathbbm{1}_{#1}}
+
+\begin{document}
+
+% Cover sheet as per Bonn University guidelines
+\begin{titlepage}
+\begin{center}
+\vspace*{2cm}
+
+{\Large \textbf{Social Learning via Multi Agent Reinforcement Learning}}\\[6cm]
+
+Master Thesis Presented to the\\
+Department of Economics at the\\
+Rheinische Friedrich-Wilhelms-Universität Bonn\\[1cm]
+
+In Partial Fulfillment of the Requirements for the Degree of\\
+Master of Science (M.Sc.)\\[4cm]
+
+Supervisor: Prof. Dr. Florian Brandl\\[2cm]
+
+Submitted in June, 2025 by:\\
+Ege Can Doğaroğlu\\
+Matriculation Number: 3464688
+
+\end{center}
+\end{titlepage}
+
+% Set page numbering to 'gobble' (no numbers) for front matter
+\pagenumbering{gobble}
+
+% Abstract
+\begin{abstract}
+\begin{adjustwidth}{2cm}{2cm}
+This thesis bridges economic social learning theory and multi-agent reinforcement learning by introducing Partially Observable Active Markov Games (POAMGs)—a novel framework for modeling sophisticated learning dynamics in environments with partial observability. Traditional economic models provide valuable theoretical insights but often rely on simplified assumptions about agents' behavior or the learning environment, while reinforcement learning approaches offer computational tools that frequently lack theoretical foundations for strategic adaptation. Our framework addresses three fundamental challenges: modeling strategic adaptation in non-stationary environments, incorporating partial observability as an intrinsic feature, and capturing long-term strategic considerations in learning contexts. We develop POLARIS (Partially Observable Learning with Active Reinforcement In Social environments), a practical algorithm implementing our theoretical framework, and apply it to two canonical social learning scenarios: strategic experimentation with observable rewards and learning without experimentation through action observation. Our results validate theoretical predictions about ... while demonstrating how reinforcement learning agents can discover sophisticated strategies for information revelation and strategic influence, providing both theoretical insights and computational tools for understanding complex social learning dynamics.
+\end{adjustwidth}
+\end{abstract}
+
+% Table of contents
+\tableofcontents
+\newpage
+
+% Optional - include if you have abbreviations, tables, or figures to list
+%\listoffigures
+%\listoftables
+%\newpage
+
+% Page numbering starts here with Arabic numerals
+\chapter{Introduction}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\input{intro}
+\chapter{Related Work}
+\input{background}
+\chapter{Theoretical Framework}
+\input{theory}
+\chapter{Results}
+\input{results}
+\chapter{Conclusion}
+\input{conclusion}
+
+% Appendix
+\newpage
+\appendix
+\addcontentsline{toc}{chapter}{Appendices}
+\input{appendix}
+
+% Bibliography
+\newpage
+\renewcommand{\bibname}{References}
+\renewcommand{\thechapter}{R}
+\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{apacite}
+\bibliography{refs}
+\renewcommand{\thechapter}{\arabic{chapter}} % Reset chapter numbering
+
+% Statement of Authorship (as required)
+\newpage
+\section*{Statement of Authorship}
+
+I hereby confirm that the work presented has been performed and interpreted solely by myself except for where I explicitly identified the contrary. I assure that this work has not been presented in any other form for the fulfillment of any other degree or qualification. Ideas taken from other works in letter and in spirit are identified in every single case.\\[2cm]
+
+\noindent Date: \rule{4cm}{0.5pt} \hfill Signature: \rule{6cm}{0.5pt}
+
+\end{document}

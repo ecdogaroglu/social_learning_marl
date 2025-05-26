@@ -1,0 +1,2085 @@
+\setcounter{proposition}{0}
+\setcounter{assumption}{0}
+\setcounter{lemma}{0}
+\setcounter{theorem}{0}
+
+\chapter{Reinforcement Learning Background}
+
+\label{appendix:rl_details}
+This section provides a brief overview of reinforcement learning (RL) and multi-agent reinforcement learning (MARL) to provide a foundation for understanding the theoretical framework presented in this paper.
+
+\section{Reinforcement Learning Foundations}
+
+Reinforcement learning (RL) provides a mathematical framework for solving sequential decision-making problems under uncertainty. In the classical single-agent setting, an agent interacts with a stationary environment by observing states, taking actions, and receiving rewards, with the objective of maximizing its expected cumulative reward over time \cite{sutton2018reinforcement}. This interaction is formalized as a Markov Decision Process (MDP), defined as a tuple $M = \langle S, A, T, R, \gamma \rangle$ where:
+
+\begin{itemize}
+    \item $S$ is the state space, representing all possible configurations of the environment
+    \item $A$ is the action space, representing all possible decisions available to the agent
+    \item $T: S \times A \mapsto \Delta(S)$ is the transition function, specifying the probability distribution over next states given the current state and action
+    \item $R: S \times A \mapsto \mathbb{R}$ is the reward function, specifying the immediate reward received after taking an action in a state
+    \item $\gamma \in [0, 1)$ is the discount factor, balancing immediate versus future rewards
+\end{itemize}
+
+The agent's behavior is characterized by a policy $\pi: S \mapsto \Delta(A)$, which maps states to probability distributions over actions. The policy can be evaluated using value functions: the state-value function $V^\pi(s)$ represents the expected return when starting in state $s$ and following policy $\pi$ thereafter, while the action-value function $Q^\pi(s, a)$ represents the expected return after taking action $a$ in state $s$ and following policy $\pi$ thereafter. The goal of RL is to find an optimal policy $\pi^*$ that maximizes the expected return from all states.
+
+The Markov property, which states that the future is independent of the past given the present, is a fundamental assumption in MDPs. This property ensures that the current state provides all the necessary information for making optimal decisions, greatly simplifying the learning problem. However, this assumption becomes problematic in multi-agent settings, as we will discuss next.
+
+\section{Multi-Agent Reinforcement Learning: Concepts and Challenges}
+
+Multi-agent reinforcement learning (MARL) extends the single-agent RL framework to environments with multiple autonomous agents that interact simultaneously \cite{marl-book,yang2020overview, huh2024multiagentreinforcementlearningcomprehensive, busoniu2010multi, zhang2021multi}. MARL encompasses a wide spectrum of scenarios, from fully cooperative tasks where agents share a common reward function, to fully competitive zero-sum games, to the general mixed cooperative-competitive case with individual reward functions \cite{nowé2012game}. These interactions are commonly formalized as Markov games (also known as stochastic games) \cite{littman1994markov, shapley1953stochastic}, defined as a tuple $M_n = \langle I, S, A, T, R, \gamma \rangle$, where:
+
+\begin{itemize}
+    \item $I = \{1, \ldots, n\}$ is the set of $n$ agents
+    \item $S$ is the state space, shared among all agents
+    \item $A = \times_{i \in I} A^i$ is the joint action space, where $A^i$ is the action space of agent $i$
+    \item $T: S \times A \mapsto \Delta(S)$ is the transition function that depends on the joint action
+    \item $R = \times_{i \in I} R^i$ is the joint reward function, where $R^i: S \times A \mapsto \mathbb{R}$ is agent $i$'s individual reward function
+    \item $\gamma \in [0, 1)$ is the discount factor
+\end{itemize}
+MARL introduces several fundamental challenges beyond those encountered in single-agent RL. The joint action space grows exponentially with the number of agents, creating a combinatorial explosion that makes exploration and learning increasingly difficult as more agents are added to the system. Coordination challenges further complicate the learning process, as agents must synchronize their actions to achieve effective joint behavior, especially in cooperative settings where team performance depends on complementary actions \cite{du2023reviewcooperationmultiagentlearning}, that can also involve explicit communication \cite{zhu2024surveymultiagentdeepreinforcement}. In scenarios with shared rewards, the credit assignment problem becomes particularly troublesome, as determining individual contributions to team success grows increasingly complex when outcomes result from joint actions rather than individual decisions. MARL also demands sophisticated strategic reasoning, requiring agents to model and reason about other agents' goals, beliefs, and strategies, particularly in competitive or mixed cooperative-competitive settings. Perhaps most critically, when multiple agents learn simultaneously, the environment becomes non-stationary from each agent's perspective, as other agents' changing policies continuously modify the effective environment dynamics, violating a fundamental assumption of traditional reinforcement learning algorithms.
+
+\section{The Non-Stationarity Challenge}
+The non-stationarity problem in MARL represents a fundamental departure from single-agent RL assumptions and presents one of the most significant obstacles to effective multi-agent learning \cite{hernandez2017survey, papoudakis2019dealing}. To understand this challenge more precisely, we can analyze how learning dynamics alter the effective environment for each agent. When multiple agents learn simultaneously, each agent $i$ with policy $\pi^i$ effectively faces an environment whose dynamics depend on the joint policies of all other agents $\pi^{-i}$. From agent $i$'s perspective, the effective transition function becomes:
+\begin{equation}
+    T^i_{\boldsymbol{\pi}^{-i}_t}(s_{t+1}|s_t, a^i_t) = \sum_{\mathbf{a}^{-i} \in A^{-i}} \left(\prod_{j \in I \setminus \{i\}} \pi^j_t(a^j|s_t)\right) \cdot T(s_{t+1}|s_t, (a^i_t, \mathbf{a}^{-i}))
+\end{equation}
+where $A^{-i}$ denotes the joint action space, $\mathbf{a}^{-i}$ denotes the joint action and $\boldsymbol{\pi}^{-i}_t$ denotes the joint policies of all agents except $i$. When other agents update their policies from $\boldsymbol{\pi}^{-i}_t$ to $\boldsymbol{\pi}^{-i}_{t+1}$ through learning, this effective transition function changes, creating a non-stationary environment for agent $i$. This non-stationarity violates the Markov property assumption underlying most RL algorithms and can lead to several significant challenges that fundamentally undermine the theoretical foundations of single-agent RL. When multiple agents learn simultaneously, standard RL convergence guarantees no longer apply, and learning algorithms may oscillate or diverge as the effective environment continuously shifts \cite{bowling2002multiagent}. This dynamic environment causes value function approximations to become increasingly inaccurate over time, leading to suboptimal policy decisions as agents base their choices on outdated models of their environment \cite{lauer2000algorithm}. Further complicating matters, agents face a moving target problem where they must simultaneously learn optimal policies while adapting to the evolving strategies of others, creating a complex coupled learning process that resists straightforward optimization approaches \cite{laurent2011world}. The situation becomes particularly problematic in competitive settings, where learning dynamics may lead to cyclic policy changes rather than convergence to stable strategies, as agents continuously adapt and counter-adapt to each other's evolving behaviors \cite{balduzzi2018mechanics}. These interconnected challenges highlight why addressing non-stationarity remains one of the central research questions in multi-agent reinforcement learning.
+
+\section{Traditional Approaches to Non-Stationarity}
+Researchers have developed various approaches to address the non-stationarity challenge in MARL. These can be broadly categorized as follows:
+
+\subsection{Independent Learning}
+The simplest approach is to ignore non-stationarity entirely, treating other agents as part of the environment and applying standard single-agent RL algorithms independently for each agent \cite{tan1993multi}. This approach, often called Independent Learning (IL), requires no explicit coordination or modeling of other agents. Methods in this category include Independent Q-Learning \cite{tampuu2017multiagent}, where each agent maintains its own Q-function and updates it using only its own experiences. While computationally efficient and naturally scalable to many agents, independent learning lacks theoretical convergence guarantees and can fail in complex multi-agent scenarios due to the violation of the stationarity assumption.
+
+\subsection{Centralized Training with Decentralized Execution}
+To mitigate non-stationarity during learning while preserving autonomous execution, many approaches adopt the paradigm of centralized training with decentralized execution (CTDE) \cite{lowe2017multi, foerster2018counterfactual, sunehag2018value}. In CTDE, agents have access to additional information during training (e.g., joint actions, global state, other agents' policies) but operate based solely on their local observations during execution.
+
+Notable algorithms in this category include Multi-Agent Deep Deterministic Policy Gradient (MADDPG) \cite{lowe2017multi}, which uses centralized critics with access to joint actions and states during training but decentralized actors during execution. Another significant approach is Counterfactual Multi-Agent Policy Gradients (COMA) \cite{foerster2018counterfactual}, which addresses credit assignment using a centralized critic that computes a counterfactual baseline. The category also features QMIX \cite{rashid2018qmix}, which learns a centralized value function that factorizes into a mixing of individual agent Q-values, ensuring consistency between centralized and decentralized policies. While CTDE methods help stabilize learning, they still do not fully address the fundamental non-stationarity issue, as they focus on adapting to current policies rather than reasoning about policy evolution over time.
+
+\subsection{Opponent Modeling and Population-Based Training}
+Another approach is to explicitly model the behavior and learning processes of other agents, enabling more informed adaptation \cite{albrecht2018autonomous, he2016opponent}. This can involve predicting other agents' policies, types, or learning dynamics. Methods in this category include Deep Reinforcement Opponent Network (DRON) \cite{he2016opponent}, which integrates opponent modeling into deep Q-learning. Another significant approach is Probabilistic Recursive Reasoning (PR2) \cite{wen2019probabilistic}, which models higher-order beliefs about other agents' reasoning processes.
+
+The category also encompasses Population-Based Training (PBT) \cite{jaderberg2019human}, which trains a population of agents simultaneously, creating a naturally changing learning environment that promotes robustness to non-stationarity. While these approaches can better handle changing policies, they typically focus on adaptation to current policies rather than influencing the learning trajectories of other agents.
+
+\subsection{Equilibrium Learning and Stability Concepts}
+Drawing on game theory, some approaches focus on finding policies that constitute game-theoretic solution concepts like Nash equilibria \cite{bowling2005convergence, hu2003nash, littman2001friend}. These methods aim to find stable joint policies where no agent has an incentive to unilaterally deviate. Notable algorithms include Nash Q-Learning \cite{hu2003nash}, which converges to Nash equilibria in general-sum Markov games. Another significant approach is Friend-or-Foe Q-Learning \cite{littman2001friend}, which converges to optimal policies in restricted classes of Markov games.
+
+The category also features WoLF-PHC (Win or Learn Fast - Policy Hill Climbing) \cite{bowling2002multiagent}, which adjusts learning rates based on whether an agent is "winning" or "losing" to promote convergence. While these approaches provide theoretical guarantees under certain conditions, they often make strong assumptions about the game structure and other agents' rationality. Moreover, they focus on convergence to static equilibria rather than the dynamic nature of multi-agent learning.
+
+\subsection{Meta-Learning for Non-Stationarity}
+Recent work has explored meta-learning as a framework for rapid adaptation to non-stationarity in MARL \cite{alshedivat2018continuous, kim2021policy}. These approaches train agents to quickly adapt to new agents or environments, treating non-stationarity as a meta-learning problem. Key methods include Continuous Adaptation via Meta-Learning (CAML) \cite{alshedivat2018continuous}, which uses meta-learning to quickly adapt to evolving opponents.
+
+Another significant approach is Meta-MAPG (Meta-Multiagent Policy Gradient) \cite{kim2021policy}, which extends meta-learning to explicitly account for the influence of an agent's actions on the learning processes of other agents. While meta-learning approaches show promise for rapid adaptation, they often still lack a comprehensive framework for modeling and influencing the long-term learning dynamics of multi-agent systems.
+
+\section{Active Markov Games}
+
+Active Markov Games provide a more sophisticated framework for modeling the dynamic nature of multi-agent learning by explicitly incorporating the policy update processes of all agents \cite{kim2022influencing}. They extend standard Markov games to capture not just the immediate effects of actions on states and rewards, but also their influence on future policy updates, addressing the non-stationarity challenge at a fundamental level.
+
+\subsection{Formal Definition}
+
+An Active Markov Game is defined as a tuple $M_n = \langle I, S, A, T, R, \Theta, U \rangle$, where:
+
+\begin{itemize}
+    \item $I = \{1, \ldots, n\}$ is the set of $n$ agents
+    \item $S$ is the state space
+    \item $A = \times_{i \in I} A^i$ is the joint action space, where $A^i$ is the action space of agent $i$
+    \item $T: S \times A \mapsto \Delta(S)$ is the transition function
+    \item $R = \times_{i \in I} R^i$ is the joint reward function, where $R^i: S \times A \mapsto \mathbb{R}$ is agent $i$'s individual reward function
+    \item $\Theta = \times_{i \in I} \Theta^i$ is the joint policy parameter space, where $\Theta^i$ is the policy parameter space for agent $i$
+    \item $U = \times_{i \in I} U^i$ is the joint Markovian policy update function, where $U^i: \Theta^i \times T^i \mapsto \Delta(\Theta^i)$ maps current policy parameters and transitions to distributions over next policy parameters
+\end{itemize}
+Here, $T^i$ represents the trajectory space for agent $i$, with a particular element $\tau^i_t = \{s_t, \mathbf{a}_t, r^i_t, s_{t+1}\}$ consisting of the current state, joint action, reward received, and the next state. The interaction process in an Active Markov Game unfolds through a sequential procedure of actions and updates. At timestep $t$, each agent $i$ selects an action $a^i_t \sim \pi^i(\cdot|s_t; \theta^i_t)$ based on its parameterized policy with parameters $\theta^i_t \in \Theta^i$. Following this selection, the environment transitions from state $s_t$ to $s_{t+1}$ according to $T(s_{t+1}|s_t, \mathbf{a}_t)$ based on the joint action $\mathbf{a}_t = (a^1_t, \ldots, a^n_t)$. Each agent $i$ then receives a reward $r^i_t = R^i(s_t, \mathbf{a}_t)$ and subsequently updates its policy parameters according to its update function $\theta^i_{t+1} \sim U^i(\theta^i_{t+1}|\theta^i_t, \tau^i_t)$. This process continues until non-stationary policies converge to a recurrent set of joint policies. The key insight is that agent $i$'s actions not only affect immediate states and rewards but also influence future policy updates of all agents, including itself, through the trajectory $\tau^i_t$.
+
+\subsection{Augmented Transition Function and Stationarity}
+
+The Active Markov Game framework fundamentally transforms the non-stationarity problem by explicitly modeling how policies evolve through Markovian update functions. To understand this transformation, let us contrast the transition functions in standard MARL and Active Markov Games. In standard MARL, the transition function $T: S \times A \mapsto \Delta(S)$ only captures state transitions based on joint actions. However, Active Markov Games introduce a critical innovation: they explicitly model how policies change via Markovian update functions. The augmented transition function becomes:
+
+\begin{equation}
+    \mathbb{P}(s_{t+1}, \boldsymbol{\theta}_{t+1}|s_t, \boldsymbol{\theta}_t) = \sum_{\mathbf{a}_t \in A} \left(\prod_{i \in I} \pi^i(a^i_t|s_t; \theta^i_t)\right) \times T(s_{t+1}|s_t, \mathbf{a}_t) \times \boldsymbol{U}(\boldsymbol{\theta}_{t+1}|\boldsymbol{\theta}_t, \boldsymbol{\tau}_t)
+\end{equation}
+The crucial difference is the inclusion of $\boldsymbol{U}$ - a Markovian update function that specifies exactly how policy parameters $\boldsymbol{\theta}_t$ (and consequently policies $\boldsymbol{\pi}$) evolve based on current parameters and trajectories. By making policy updates an explicit part of the system dynamics, what was previously an unpredictable external process becomes a predictable internal one. This augmented transition function operates over the joint space $(s, \boldsymbol{\theta}) \in S \times \Theta$, creating a joint process that is stationary even though individual policies are changing.
+
+
+\subsection{Theoretical Properties and Convergence}
+
+Active Markov Games exhibit important theoretical properties that enable rigorous analysis of multi-agent learning dynamics:
+
+\paragraph{Stationary Periodic Distributions.} Under mild assumptions, the joint process of states and policies in an Active Markov Game converges to a stationary periodic distribution \cite{kim2022influencing}:
+
+\begin{equation}
+    \mu_k(s, \theta|s_0, \theta_0, \ell) = \mathbb{P}(s_t = s, \theta_t = \theta|s_0, \theta_0, \ell)
+\end{equation}
+
+where $\ell = t\%k$ with $\%$ denoting the modulo operation. This distribution represents the limiting behavior of the system after convergence, characterized by potentially periodic patterns of states and policies. The parameter $k$ represents the period length, with $k=1$ corresponding to fixed-point convergence. To address sensitivity to initial conditions, the framework introduces the concept of \textit{stochastically stable distributions} \cite{kim2022influencing}. These are limiting distributions that emerge when small random perturbations are added to policy updates, providing robustness to initial state and policy configurations.
+
+\paragraph{Long-term Optimization Objective.} In Active Markov Games, agents optimize for long-term average reward rather than discounted return \cite{sutton2018reinforcement, kim2022influencing}:
+
+\begin{equation}
+    \max_{\theta^i, U^i} \rho^i(s, \theta, U) := \max_{\theta^i, U^i} \lim_{T \to \infty} \mathbb{E}\left[\frac{1}{T}\sum_{t=0}^T R^i(s_t, \mathbf{a}_t) \Bigg|
+        \begin{array}{c}
+            s_0=s, \theta_0=\theta,                                              \\
+            \mathbf{a}_{0:T} \sim \boldsymbol{\pi}(\cdot|s_{0:T}; \theta_{0:T}), \\
+            s_{t+1} \sim T(\cdot|s_t, \mathbf{a}_t),
+            \theta_{t+1} \sim U(\cdot|\theta_t, \boldsymbol{\tau}_t)
+        \end{array}
+        \right]
+\end{equation}
+
+where  $0:T$ denotes the sequence from time $0$ to $T$. This formulation encourages agents to consider how to influence the limiting behavior of the system rather than just short-term performance, addressing the non-stationarity challenge at a fundamental level.
+
+\paragraph{Active Equilibrium.} Active Markov Games give rise to a new solution concept called the Active Equilibrium \cite{kim2022influencing}, which generalizes traditional game-theoretic equilibria like Nash equilibrium. An Active Equilibrium is a joint policy parameter $\theta^* = \{\theta^{i*}, \theta^{-i*}\}$ with associated joint update function $U^* = \{U^{i*}, U^{-i*}\}$ such that:
+
+\begin{equation}
+    \rho^i(s, \theta^{i*}, \theta^{-i*}, U^{i*}, U^{-i*}) \geq \rho^i(s, \theta^i, \theta^{-i*}, U^i, U^{-i*})
+\end{equation}
+for all $i \in I$, $s \in S$, $\theta^i \in \Theta^i$, $U^i \in U^i$. This equilibrium concept captures the idea that rational agents should optimize not just their immediate policies but also their adaptation strategies, taking into account the learning dynamics of the system. The active equilibrium generalizes several classic solution concepts in game theory. Stationary Nash equilibria and correlated equilibria are special cases of active equilibria when $k = 1$ (fixed-point convergence) and joint action distributions are independent or correlated, respectively. Similarly, cyclic Nash equilibria and cyclic correlated equilibria can be viewed as special cases of active equilibria when $k > 1$ (periodic behavior), the joint update function is deterministic, and joint action distributions are independent or correlated, respectively. This generality allows the active equilibrium concept to capture a wider range of stable multi-agent behaviors in dynamic learning settings than traditional equilibrium notions.
+
+
+Active Markov Games address the non-stationarity challenge in several fundamental ways. By incorporating policy parameters and update functions directly into the framework, Active Markov Games make the non-stationarity explicit and amenable to analysis, embracing it as an integral part of the multi-agent learning process rather than treating it as an external challenge to be mitigated. The average reward objective promotes farsighted optimization by encouraging agents to consider the long-term limiting behavior of the system rather than myopically optimizing for immediate or short-term rewards, leading to policies that shape the learning trajectories of other agents in beneficial ways rather than merely reacting to their current behaviors. Furthermore, the framework enables active influence by allowing agents to reason about how their actions affect not just the environment state but also the learning processes of other agents, facilitating sophisticated strategies like teaching, deception, or coordination that explicitly aim to influence other agents' policy updates. Under appropriate conditions, Active Markov Games provide theoretical guarantees about convergence to stationary periodic distributions, offering a more solid foundation for algorithm development than approaches without such guarantees. Finally, the Active Equilibrium concept generalizes traditional game-theoretic solution concepts, providing a more comprehensive framework for understanding stable multi-agent behaviors in learning settings.
+
+
+\subsection{Practical Implementations}
+
+Recent work has leveraged the Active Markov Game framework to develop practical algorithms for MARL. Notable examples include FURTHER (FUlly Reinforcing acTive influence witH averagE Reward) \cite{kim2022influencing}, which implements a policy gradient approach tailored to the average reward objective in Active Markov Games, combined with variational inference for estimating other agents' policy dynamics in a decentralized manner. Another significant approach is Meta-MAPG (Meta-Multiagent Policy Gradient) \cite{kim2021policy}, which integrates meta-learning with explicit modeling of other agents' learning processes, aligning with the influence-aware perspective of Active Markov Games. These algorithms have demonstrated superior performance compared to methods that neglect the learning dynamics of other agents, particularly in environments with high levels of non-stationarity.
+
+\section{Extension to Partial Observability}
+
+While Active Markov Games provide a powerful framework for addressing non-stationarity, they assume full observability of the environment state. In many real-world scenarios, agents have limited perception capabilities and cannot directly observe the complete state of the environment or the internal parameters of other agents. This partial observability introduces additional challenges for multi-agent learning. The Partially Observable Markov Decision Process (POMDP) \cite{kaelbling1998planning} extends MDPs to settings with partial observability by introducing observation functions. In the multi-agent context, this leads to Partially Observable Stochastic Games (POSGs) \cite{hansen2004dynamic} or Decentralized POMDPs (Dec-POMDPs) for cooperative settings \cite{bernstein2002complexity}. Extending Active Markov Games to partial observability settings represents a significant advancement in addressing the combined challenges of non-stationarity and limited information in multi-agent learning. The resulting framework, Partially Observable Active Markov Games, incorporates belief states and observation functions while maintaining the key benefits of Active Markov Games for modeling and influencing learning dynamics.
+
+In partially observable settings, policy gradient methods require careful adaptation to handle the unavailability of the true state. Theoretical formulations, as established by Meuleau et al. \cite{meuleau1999pomdp}, extend the policy gradient theorem by conditioning policies on belief states rather than environmental states, resulting in $\nabla_{\theta^i} J(\theta^i) = \mathbb{E}_{s,b} \left[ \nabla_{\theta^i} \log \pi^i(a^i|b^i; \theta^i) Q^{\pi}(s,b^i,a^i) \right]$. However, this theoretical construction presents a practical challenge: agents don't have access to the true state distribution needed to compute this expectation. Practical implementations resolve this tension through multiple approaches: history-based methods condition policies on observation histories $h_t$ rather than belief states \cite{aberdeen2002pg}; recurrent network formulations implicitly encode history using recurrent architectures \cite{hausknecht2015drqn}; and belief-explicit methods maintain and update a belief distribution while estimating values only from observable quantities \cite{peng2022belief}. These approaches share a common principle of using trajectory sampling to estimate gradients without requiring knowledge of the true state or transition dynamics. In multi-agent settings with partial observability, the challenge compounds as agents must reason about others' belief states and learning dynamics, requiring sophisticated inference mechanisms to estimate other agents' policies and their evolution over time. For Partially Observable Active Markov Games, policy gradients can be formulated to account for the impact of current actions on both the future environmental states and the future policies of other agents, all while operating from belief states rather than full state observations.
+
+\chapter{Proofs Regarding Average Returns}
+
+This section provides the mathematical foundations and detailed proofs for the
+key theoretical results in our Partially Observable Active Markov Game framework
+with average return objectives. We establish the Markov properties of belief transitions
+and joint processes, prove the existence and uniqueness of stochastically stable
+distributions, and derive the policy gradient theorem for average return optimization.
+
+\section{Markov Property of the Joint Process}
+\label{appendix:stochasticallystable}We first establish the Markov properties of
+belief state transitions and the joint process comprising states, belief states,
+and policy parameters. These properties form the foundation for our convergence analysis.
+
+\begin{lemma}[Markov Property of Belief Transitions]
+    The sequence of belief states $\{b_{t}^{i}\}_{t \geq 0}$ for each agent $i$ forms
+    a Markov process under a fixed policy $\pi$, meaning that the distribution of
+    $b_{t+1}^{i}$ depends only on $b_{t}^{i}$, $a_{t}^{i}$, and $o_{t+1}^{i}$, and
+    not on earlier beliefs, actions, or observations.
+\end{lemma}
+
+\begin{proof}
+    By definition, the belief state $b_{t}^{i}$ at time $t$ incorporates all
+    relevant information from the history of observations and actions up to time
+    $t$. For Bayesian agents, given $b_{t}^{i}$, action $a_{t}^{i}$, and
+    observation $o_{t+1}^{i}$, the belief update equation uniquely determines $b_{t+1}
+            ^{i}$ through the rule:
+    \begin{align}
+        b^i_{t+1}(s') = \frac{O^i(o^i_{t+1}|s') \int_{s \in S} T(s'|s, \boldsymbol{a}_t) b^i_t(s) ds}{\int_{s'' \in S} O^i(o^i_{t+1}|s'') \int_{s \in S} T(s''|s, \boldsymbol{a}_t) b^i_t(s) ds ds''}
+    \end{align}
+
+    where $O_{i}(o_{t+1}^{i}|s')$ represents the probability of agent $i$ observing
+    $o_{t+1}^{i}$ in state $s'$. This update depends only on $b_{t}^{i}$, $a_{t}^{i}$,
+    and $o_{t+1}^{i}$, and not on the sequence of beliefs, actions, and observations
+    that led to $b_{t}^{i}$. Therefore, the belief state transition satisfies the Markov
+    property.
+\end{proof}
+
+\begin{remark}[Transformer-Based Belief Representation]
+    In practice, transformer architectures can be used to represent and
+    update belief states. In such cases, the belief state is updated
+    through an attention-based mechanism of the form:
+    \begin{equation}
+        b_{t+1}^{i} = f_{{Transformer}}(b_{t}^{i}, o_{t+1}^{i}),
+    \end{equation}
+
+    that is parameterized by $\theta_{Transformer}^{i}$ and processes the latest
+    observation and previous belief state through self-attention layers, satisfying the Markov property
+    while capturing complex dependencies between observations and beliefs.
+\end{remark}
+Next, we establish the Markov property of the joint process.
+\begin{lemma}[Markov Property of Joint Process]
+    The joint process $(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})$ forms
+    a Markov process under periodic policy updates, meaning that the distribution
+    of $(s_{t+1}, \boldsymbol{b}_{t+1}, \boldsymbol{\theta}_{t+1})$ depends only
+    on $(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})$ and not on earlier
+    states.
+\end{lemma}
+\begin{proof}
+    The state transitions are by definition only dependent on current state and current
+    actions. The remaining parts can be analyzed as follows:
+
+    \textbf{1. Belief
+        state transition:} As established earlier, $\boldsymbol{b}_{t+1}$ depends only
+    on $\boldsymbol{b}_{t}$, $\boldsymbol{a}_{t}$, and $\boldsymbol{o}_{t+1}$. Since
+    actions $\boldsymbol{a}_{t}$ are drawn from policies $\pi(a_{t}^{i}|b_{t}^{i};
+        \theta_{t}^{i})$ that depend only on $b_{t}^{i}$ and $\theta_{t}^{i}$ for each
+    agent $i$, and observations $\boldsymbol{o}_{t+1}$ depend stochastically on
+    the resulting state, the distribution of $\boldsymbol{b}_{t+1}$ depends only on
+    $\boldsymbol{b}_{t}$ and $\boldsymbol{\theta}_{t}$.
+
+    \textbf{2. Policy parameter
+        update:} At every time step $t$, policy parameters are updated according to $U(
+        \boldsymbol{\theta}_{t+1}|\boldsymbol{\theta}_{t}, \boldsymbol{\tau}_{t})$.
+    Under the Markovian policy update assumption, the update depends only on $\theta
+        _{t}$ and current trajectory $\tau_{t}$, which are functions of $s_{t}$, $\boldsymbol
+        {b}_{t}$ and $\boldsymbol{\theta}_{t}$.Therefore, the joint transition
+    probability
+    $\mathbb{P}((s_{t+1}, \boldsymbol{b}_{t+1}, \boldsymbol{\theta}_{t+1})|(s_{t}, \boldsymbol
+        {b}_{t}, \boldsymbol{\theta}_{t}))$
+    depends only on the current state
+    $(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})$ and not on the history
+    of states, establishing the Markov property.
+\end{proof}
+\section{Convergence}
+Having established the Markov properties, we now analyze the convergence
+behavior of the joint process to a unique stochastically stable distribution. This
+convergence result is crucial for developing optimization objectives in our framework.
+\begin{theorem}[Stochastically Stable Distribution]
+    Under assumptions (1) and (2), as $\epsilon \to 0$, the perturbed joint processes
+    defined by $\epsilon$-perturbed policy update functions converge to the unique
+    stochastically stable distribution $\mu^{*}$ of the unperturbed joint process $(
+        s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})$.
+\end{theorem}
+
+\begin{proof}
+    We establish the convergence to the unique stochastically stable distribution by
+    showing that a perturbed Markov process of a partially observable active Markov
+    game is regular. First, let us introduce a small perturbation to the policy update
+    functions:
+    \begin{align}
+        U^{\epsilon}_{i}(\theta^{i}_{t+1}|\theta^{i}_{t}, \tau^{i}_{t}) = (1 - \epsilon) U_{i}(\theta^{i}_{t+1}|\theta^{i}_{t}, \tau^{i}_{t}) + \epsilon \eta_{i}(\theta^{i}_{t+1})
+    \end{align}
+
+    where $\eta_{i}$ is a baseline distribution over $\Theta_{i}$ with full support,
+    and $\epsilon > 0$ is a small constant. This perturbation ensures that from any
+    policy parameter configuration $\boldsymbol{\theta}_{t}$, there is a positive
+    probability of transitioning to any other configuration
+    $\boldsymbol{\theta}_{t+1}$. The perturbed joint process $(s_{t}, \boldsymbol{b}
+        _{t}, \boldsymbol{\theta}_{t})^{\epsilon}$ evolves according to the transition
+    probability:
+    \begin{align}
+        \mathbb{P}(s_{t+1}, \boldsymbol{b}_{t+1}, \boldsymbol{\theta}_{t+1}|s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t}) & = \sum_{\boldsymbol{a}_t \in A}\boldsymbol{\pi}(\boldsymbol{a}_{t}|\boldsymbol{b}_{t}; \boldsymbol{\theta}_{t}) \times T(s_{t+1}|s_{t}, \boldsymbol{a}_{t})                                     \\
+                                                                                                                                & \times \sum_{\boldsymbol{o}_{t+1} \in O}\boldsymbol{O}(\boldsymbol{o}_{t+1}|s_{t+1}) \times \boldsymbol{U}^{\epsilon}(\boldsymbol{\theta}_{t+1}|\boldsymbol{\theta}_{t}, \boldsymbol{\tau}_{t}) \\
+                                                                                                                                & \times \mathbb{I}(\boldsymbol{b}_{t+1}= \text{update}(\boldsymbol{b}_{t}, \boldsymbol{a}_{t}, \boldsymbol{o}_{t+1}))
+    \end{align}
+
+    where $\boldsymbol{\tau}_{t} = \{\boldsymbol{o}_{t}, \boldsymbol{a}_{t}, \boldsymbol
+        {r}_{t}, \boldsymbol{o}_{t+1}\}$ is the joint trajectory,
+    $\boldsymbol{r}_{t} = \{R^{i}(s_{t}, \boldsymbol{a}_{t})\}_{i \in I}$ is the
+    vector of rewards, and $\text{update}(\boldsymbol{b}_{t}, \boldsymbol{a}_{t}, \boldsymbol
+        {o}_{t+1})$ represents the belief update function for all agents. Suppose, for
+    contradiction, that the perturbed Markov process is irregular, meaning it has multiple
+    recurrent classes. Let $C_{1}$ and $C_{2}$ be two distinct recurrent classes
+    of the joint process. We will show that there must exist a path with positive probability
+    from any state in $C_{1}$ to any state in $C_{2}$, contradicting the
+    assumption that they are distinct recurrent classes. Consider any $(s^{1}, \boldsymbol
+        {b}^{1}, \boldsymbol{\theta}^{1}) \in C_{1}$ and $(s^{2}, \boldsymbol{b}^{2}, \boldsymbol
+        {\theta}^{2}) \in C_{2}$. We construct a path from the first state to the
+    second as follows:
+
+    \textbf{1. Policy Parameter Transition:} Due to the
+    $\epsilon$-perturbation in update functions, there is a positive probability of
+    directly transitioning from $\boldsymbol{\theta}_{1}$ to any $\boldsymbol{\theta}
+        ' \in \Theta$ in a single step, regardless of the trajectory. Specifically:
+    \begin{align}
+        \mathbb{P}(\boldsymbol{\theta}_{t+1}=\boldsymbol{\theta}'|\boldsymbol{\theta}_{t}=\boldsymbol{\theta}_{1}, \boldsymbol{\tau}_{t}) \geq \prod_{i \in I}\epsilon \cdot \eta_{i}(\theta'^{i}) > 0
+    \end{align}
+
+    Thus, there is a positive probability path from $\boldsymbol{\theta}_{1}$ to
+    $\boldsymbol{\theta}_{2}$.
+
+    \textbf{2. State Transition:} By the communicating
+    state assumption, for any two states $s_{1}, s_{2} \in S$, there exists a
+    sequence of joint actions $\boldsymbol{a}_{1}, \ldots, \boldsymbol{a}_{k}$
+    such that:
+    \begin{align}
+        \mathbb{P}(s_{t+k}=s_{2}|s_{t}=s_{1}, \boldsymbol{a}_{t}=\boldsymbol{a}_{1}, \ldots, \boldsymbol{a}_{t+k-1}=\boldsymbol{a}_{k}) > 0
+    \end{align}
+
+    Given the relationship between policies and actions, this sequence of actions has
+    positive probability under any policy parameters $\boldsymbol{\theta}$ and corresponding
+    belief states $\boldsymbol{b}$ such that $\pi^{i}(a^{i}|b^{i}; \theta^{i}) > 0$
+    for all required actions.
+
+    \textbf{3. Belief State Transition:} By the communicating belief-state
+    assumption, for any two belief states $\boldsymbol{b}_{1}, \boldsymbol{b}_{2} \in
+        B$, there exists a sequence of observations
+    $\boldsymbol{o}_{1}, \ldots, \boldsymbol{o}_{m}$ such that:
+    \begin{align}
+        \mathbb{P}(\boldsymbol{b}_{t+m}=\boldsymbol{b}_{2}|\boldsymbol{b}_{t}=\boldsymbol{b}_{1}, \boldsymbol{o}_{t+1}=\boldsymbol{o}_{1}, \ldots, \boldsymbol{o}_{t+m}=\boldsymbol{o}_{m}) > 0
+    \end{align}
+
+    Since observations depend on states, which can be influenced through actions,
+    and actions are determined by policies, there is a positive probability path from
+    $\boldsymbol{b}_{1}$ to $\boldsymbol{b}_{2}$ under appropriate state transitions
+    and policy parameters. Combining these three components, we can construct a path
+    with positive probability from $(s^{1}, \boldsymbol{b}^{1}, \boldsymbol{\theta}
+        ^{1})$ to $(s^{2}, \boldsymbol{b}^{2}, \boldsymbol{\theta}^{2})$. This
+    contradicts the assumption that $C_{1}$ and $C_{2}$ are distinct recurrent
+    classes of the perturbed joint process. Since we have shown that the perturbed
+    joint process has only one recurrent class, it is a regular Markov process. Following
+    \citep{kim2022influencing,wicks2012algorithmcomputingstochasticallystable}, a regular Markov
+    process on a finite state space possesses a unique stationary distribution
+    $\mu^{\epsilon}$ to which it converges regardless of the initial state. Moreover,
+    as $\epsilon \to 0$, the sequence of stationary distributions $\mu^{\epsilon}$
+    converges to a limit $\mu^{*}$, which is the unique stochastically stable
+    distribution of the original, unperturbed process. Therefore, under the given conditions,
+    the joint process $(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})$ in a
+    partially observable active Markov game possesses a unique stochastically
+    stable distribution $\mu^{*}$.
+\end{proof}
+\section{Policy Gradient Theorem}
+Having established the convergence to a unique stochastically stable distribution,
+we now derive the policy gradient theorem for optimization in our framework. This
+theorem provides the mathematical foundation for gradient-based algorithms to maximize
+the average return objective.
+\label{appendix:avg_gradient}
+\begin{theorem}[Partially Observable Active Average Reward Policy Gradient
+        Theorem]
+    The gradient of the active average reward objective
+    with respect to agent $i$'s policy parameters $\theta^{i}$ in a partially observable
+    setting is:
+    \begin{align}
+        \nabla_{\theta^i}J^{i}_{\pi}(\theta^{i}) & = \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    where the action-value function $q^{i}_{\theta^i}$ is defined as:
+    \begin{align}
+        q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) = \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \left[ R^{i}(s, \boldsymbol{a}) - \rho^{i}_{\theta^i}+ v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right]
+    \end{align}
+
+    with $\text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}')$ representing
+    the belief update function.
+\end{theorem}
+
+\begin{proof}
+    We first define the average reward objective in the partially observable setting:
+    \begin{align}
+        \max_{\theta^i}\rho^{i}_{\theta^i}(\boldsymbol{b}, \boldsymbol{\theta}) & := \max_{\theta^i}\lim_{T \to \infty}\mathbb{E}\left[ \frac{1}{T}\sum_{t=0}^{T} R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| \begin{array}{c}\boldsymbol{b}_0= \boldsymbol{b}, \boldsymbol{\theta}_0= \boldsymbol{\theta}, \\ \boldsymbol{a}_{0:T} \sim \boldsymbol{\pi}(\cdot|\boldsymbol{b}_{0:T}; \boldsymbol{\theta}_{0:T}), s_{t+1} \sim T(\cdot|s_t, \boldsymbol{a}_t), \\ \boldsymbol{o}_{t+1} \sim \boldsymbol{O}(\cdot|s_{t+1}), \boldsymbol{\theta}_{t+1} \sim \boldsymbol{U}(\cdot|\boldsymbol{\theta}_t, \boldsymbol{\tau}_t)\end{array} \right] \\
+                                                                                & = \max_{\theta^i}\sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}b^{i}(s) \mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{\boldsymbol{a}}\boldsymbol{\pi}(\boldsymbol{a}|\boldsymbol{b}; \boldsymbol{\theta}) R^{i}(s, \boldsymbol{a})
+    \end{align}
+
+    where $\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})$ is the stationary
+    distribution of the joint process $(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}
+        _{t})$ under agent $i$'s policy parameterized by $\theta^{i}$. The
+    differential value function $v^{i}_{\theta^i}$ represents the expected total
+    difference between the accumulated rewards from state $s$, belief states $\boldsymbol
+        {b}$, and policy parameters $\boldsymbol{\theta}$, and the average reward $\rho
+        ^{i}_{\theta^i}$:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) = \lim_{T \to \infty}\mathbb{E}\left[ \sum_{t=0}^{T} \left(R^{i}(s_{t}, \boldsymbol{a}_{t}) - \rho^{i}_{\theta^i}\right) \bigg| \begin{array}{c}s_0=s, \boldsymbol{b}_0= \boldsymbol{b}, \boldsymbol{\theta}_0= \boldsymbol{\theta}, \\ \boldsymbol{a}_{0:T} \sim \boldsymbol{\pi}(\cdot|\boldsymbol{b}_{0:T}; \boldsymbol{\theta}_{0:T}), s_{t+1} \sim T(\cdot|s_t, \boldsymbol{a}_t), \\ \boldsymbol{o}_{t+1} \sim \boldsymbol{O}(\cdot|s_{t+1}), \boldsymbol{\theta}_{t+1} \sim \boldsymbol{U}(\cdot|\boldsymbol{\theta}_t, \boldsymbol{\tau}_t)\end{array} \right]
+    \end{align}
+
+    Following the Bellman equation derivation principles, we can express
+    $v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})$ recursively:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \mathbb{E}_{\boldsymbol{a} \sim \boldsymbol{\pi}(\cdot|\boldsymbol{b};\boldsymbol{\theta}), s' \sim T(\cdot|s,\boldsymbol{a}), \boldsymbol{o}' \sim \boldsymbol{O}(\cdot|s'), \boldsymbol{\theta}' \sim \boldsymbol{U}(\cdot|\boldsymbol{\theta}, \boldsymbol{\tau})}\left[ R^{i}(s, \boldsymbol{a}) - \rho^{i}_{\theta^i}+ v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right] \\
+                                                                 & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau})                                                                                                                              \\
+                                                                 & \quad \left[ R^{i}(s, \boldsymbol{a}) - \rho^{i}_{\theta^i}+ v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right]
+    \end{align}
+
+    where $\text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}')$
+    represents the belief update function that updates the belief state based on
+    the current belief, action, and new observation. We now define the action-value
+    function $q^{i}_{\theta^i}$ for the partially observable setting:
+    \begin{align}
+        q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) = \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \left[ R^{i}(s, \boldsymbol{a}) - \rho^{i}_{\theta^i}+ v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right]
+    \end{align}
+
+    Using this definition, we can rewrite the differential value function as:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    To derive the policy gradient, we begin by computing the gradient of the differential
+    value function with respect to $\theta^{i}$:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \nabla_{\theta^i}\left[ \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) \right] \\
+                                                                                  & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) +              \\
+                                                                                  & \quad \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \nabla_{\theta^i}q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    We expand the gradient of the action-value function:
+    \begin{align}
+        \nabla_{\theta^i}q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) & = \nabla_{\theta^i}\left[ \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \right.                                                                                                                                                                                                                                           \\
+                                                                                                  & \left. \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \left[ R^{i}(s, \boldsymbol{a}) - \rho^{i}_{\theta^i}+ v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right] \right]                                                                       \\
+                                                                                                  & = -\nabla_{\theta^i}\rho^{i}_{\theta^i}+ \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \nabla_{\theta^i}v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Substituting back into the original expression, we get:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})                             \\
+                                                                                  & \quad - \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \nabla_{\theta^i}\rho^{i}_{\theta^i}                                                                            \\
+                                                                                  & \quad + \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')                       \\
+                                                                                  & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \nabla_{\theta^i}v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Rearranging terms:
+    \begin{align}
+        \nabla_{\theta^i}\rho^{i}_{\theta^i} & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})                             \\
+                                             & \quad + \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')                       \\
+                                             & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \nabla_{\theta^i}v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \\
+                                             & \quad - \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Now, we define the transition operator that maps the expectation of a function
+    from one time step to the next:
+    \begin{align}
+        \Psi f(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i})                                                                                                                                                                                 \\
+                                                       & \quad \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    We can rewrite our expression as:
+    \begin{align}
+        \nabla_{\theta^i}\rho^{i}_{\theta^i} & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) + \Psi(\nabla_{\theta^i}v^{i}_{\theta^i})(s, \boldsymbol{b}, \boldsymbol{\theta}) - \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Now, we take the expectation with respect to the stationary distribution
+    $\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})$:
+    \begin{align}
+        \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \nabla_{\theta^i}\rho^{i}_{\theta^i} & = \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})                                                            \\
+                                                                                                                                                 & \quad + \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \Psi(\nabla_{\theta^i}v^{i}_{\theta^i})(s, \boldsymbol{b}, \boldsymbol{\theta}) - \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    By the definition of the stationary distribution, we have:
+    \begin{align}
+        \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \Psi f(s, \boldsymbol{b}, \boldsymbol{\theta}) = \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) f(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Therefore, the second and third terms in our expression cancel out, giving the
+    final policy gradient theorem:
+    \begin{align}
+        \nabla_{\theta^i}J^{i}_{\pi}(\theta^{i}) := \nabla_{\theta^i}\rho^{i}_{\theta^i} & = \sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}\mu_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+\end{proof}
+
+\chapter{Proofs Regarding Discounted Returns}
+\label{appendix:discounted_proofs} We establish the Partially Observable Active Discounted
+Return Policy Gradient Theorem through a sequence of lemmas that build the necessary
+mathematical foundation.
+\section{Transition Operator and Its Adjoint}
+To establish a rigorous framework for analyzing discounted returns in Partially
+Observable Active Markov Games, we need to formalize how value functions evolve over
+time and how probability distributions propagate through the system. This dual
+perspective is captured by two fundamental operators: the transition operator and
+its adjoint.
+
+\subsection{Definitions and Duality}
+
+We begin by defining the inner product between functions and measures, which forms
+the foundation for the duality relationship between our operators.
+
+\begin{definition}[Inner Product between Functions and Measures]
+    For a bounded measurable function $f \in \mathcal{B}(S \times \boldsymbol{B}\times
+        \boldsymbol{\Theta})$ and a finite measure $\mu \in \mathcal{M}(S \times \boldsymbol
+        {B}\times \boldsymbol{\Theta})$, their inner product is defined as the
+    Lebesgue integral:
+    \begin{equation}
+        \langle f, \mu \rangle = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}
+        f(s, \boldsymbol{b}, \boldsymbol{\theta}) \, d\mu(s, \boldsymbol{b}, \boldsymbol
+        {\theta})
+    \end{equation}
+\end{definition}
+
+This inner product captures the expected value of function $f$ with respect to
+measure $\mu$, allowing us to express value functions as expectations with respect
+to appropriate measures.
+
+\begin{definition}[Transition Operator and Its Adjoint]
+    \hfill
+    \begin{enumerate}
+        \item The \textbf{transition operator}
+              $\Psi: \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) \to \mathcal{B}
+                  (S \times \boldsymbol{B}\times \boldsymbol{\Theta})$
+              maps a bounded measurable function to its expected value after one
+              transition:
+              \begin{align}
+                  (\Psi f)(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a})                                                                                                               \\
+                                                                   & \quad \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+              \end{align}
+
+              where $\text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}')$
+              represents the belief update function.
+
+        \item The \textbf{adjoint operator}
+              $\Psi^{*}: \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) \rightarrow
+                  \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$
+              is defined on the space of finite measures such that:
+              \begin{equation}
+                  \langle \Psi f, \mu \rangle = \langle f, \Psi^{*} \mu \rangle
+              \end{equation}
+
+              for all
+              $f \in \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$ and
+              $\mu \in \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$.
+    \end{enumerate}
+\end{definition}
+
+Intuitively, $\Psi$ describes how function expectations evolve forward in time,
+meanwhile, $\Psi^{*}$ describes how probability distributions evolve in time,
+capturing the propagation of visitation probabilities through the system. The duality
+relationship ensures that expected values can be computed either by applying $\Psi$
+to functions or $\Psi^{*}$ to measures.
+
+\subsection{Properties of the Operators}
+
+These operators possess several important properties that facilitate our
+analysis of discounted returns:
+
+\begin{lemma}[Properties of the Transition Operator and Its Adjoint]
+    The transition operator $\Psi$ and its adjoint $\Psi^{*}$ satisfy the following
+    properties:
+
+    \begin{enumerate}
+        \item \textbf{Linearity:}
+              \begin{itemize}
+                  \item For the operator: For any functions
+                        $f, g \in \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}
+                            )$
+                        and constants $\alpha, \beta \in \mathbb{R}$:
+                        \begin{align}
+                            \Psi(\alpha f + \beta g) = \alpha \Psi f + \beta \Psi g
+                        \end{align}
+
+                  \item For the adjoint: For any measures
+                        $\mu, \nu \in \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}
+                            )$
+                        and constants $\alpha, \beta \in \mathbb{R}$:
+                        \begin{align}
+                            \Psi^{*}(\alpha\mu + \beta\nu) = \alpha\Psi^{*}\mu + \beta\Psi^{*}\nu
+                        \end{align}
+              \end{itemize}
+
+        \item \textbf{Positivity Preservation:}
+              \begin{itemize}
+                  \item For the operator: If $f \geq 0$, then $\Psi f \geq 0$.
+
+                  \item For the adjoint: If $\mu$ is a non-negative measure, then $\Psi^{*}
+                            \mu$ is also non-negative.
+              \end{itemize}
+
+        \item \textbf{Preservation of Total Measure:}
+              \begin{itemize}
+                  \item For the operator: The operator preserves the constant function
+                        $\mathbf{1}$:
+                        \begin{align}
+                            \Psi \mathbf{1}= \mathbf{1}
+                        \end{align}
+
+                        where $\mathbf{1}$ represents the function that equals 1 everywhere.
+
+                  \item For the adjoint: For any measure
+                        $\mu \in \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$:
+                        \begin{align}
+                            (\Psi^{*}\mu)(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) = \mu(S \times \boldsymbol{B}\times \boldsymbol{\Theta})
+                        \end{align}
+              \end{itemize}
+
+        \item \textbf{Bound Preservation:} For any bounded function $f$, $\Psi f$ is
+              bounded with:
+              \begin{align}
+                  \|\Psi f\|_{\infty}\leq \|f\|_{\infty}
+              \end{align}
+
+              where $\|f\|_{\infty}= \sup_{s,\boldsymbol{b},\boldsymbol{\theta}}|f(s,\boldsymbol
+                  {b},\boldsymbol{\theta})|$ is the supremum norm.
+
+        \item \textbf{Explicit Form of the Adjoint:} For any measurable set
+              $A \subset S \times \boldsymbol{B}\times \boldsymbol{\Theta}$:
+              \begin{align}
+                  (\Psi^{*}\mu)(A) & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}\sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i})                                                                                                                                                                                     \\
+                                   & \quad \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \mathbf{1}_{A}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \, d\mu(s, \boldsymbol{b}, \boldsymbol{\theta})
+              \end{align}
+
+              where $\mathbf{1}_{A}$ is the indicator function for set $A$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    We prove each property in turn:
+
+    \textbf{1. Linearity:}
+
+    For the operator: For any $(s, \boldsymbol{b}, \boldsymbol{\theta})$, we have:
+    \begin{align}
+         & \Psi(\alpha f + \beta g)(s, \boldsymbol{b}, \boldsymbol{\theta})                                                                                                                                                            \\
+         & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')                \\
+         & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) [\alpha f + \beta g](s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \\
+         & = \alpha \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')         \\
+         & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')                    \\
+         & \quad + \beta \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')    \\
+         & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) g(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')                    \\
+         & = \alpha (\Psi f)(s, \boldsymbol{b}, \boldsymbol{\theta}) + \beta (\Psi g)(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    For the adjoint: For any measurable function
+    $f \in \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$:
+    \begin{align}
+        \langle f, \Psi^{*}(\alpha\mu + \beta\nu) \rangle & = \langle \Psi f, \alpha\mu + \beta\nu \rangle                               \\
+                                                          & = \alpha\langle \Psi f, \mu \rangle + \beta\langle \Psi f, \nu \rangle       \\
+                                                          & = \alpha\langle f, \Psi^{*}\mu \rangle + \beta\langle f, \Psi^{*}\nu \rangle \\
+                                                          & = \langle f, \alpha\Psi^{*}\mu + \beta\Psi^{*}\nu \rangle
+    \end{align}
+
+    Since this holds for any measurable function $f$, we have $\Psi^{*}(\alpha\mu +
+        \beta\nu) = \alpha\Psi^{*}\mu + \beta\Psi^{*}\nu$ by the uniqueness of the representing
+    measure.
+
+    \textbf{2. Positivity Preservation:}
+
+    For the operator: If $f \geq 0$, then for any $(s, \boldsymbol{b}, \boldsymbol{\theta}
+        )$:
+    \begin{align}
+        (\Psi f)(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \\
+                                                         & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Since $f \geq 0$ and all probability distributions $\pi^{i}$, $\pi^{\neg i}$, $T$,
+    $\boldsymbol{O}$, and $\boldsymbol{U}$ are non-negative, the entire sum
+    consists of non-negative terms, making $(\Psi f)(s, \boldsymbol{b}, \boldsymbol
+        {\theta}) \geq 0$.
+
+    For the adjoint: If $\mu$ is non-negative, then for any non-negative measurable
+    function $f \geq 0$:
+    \begin{align}
+        \langle f, \Psi^{*}\mu \rangle = \langle \Psi f, \mu \rangle \geq 0
+    \end{align}
+
+    where the inequality follows from the positivity preservation of $\Psi$ and the
+    fact that $\mu$ is non-negative. Since this holds for all non-negative
+    functions $f$, $\Psi^{*}\mu$ must be a non-negative measure.
+
+    \textbf{3. Preservation of Total Measure:}
+
+    For the operator: Let $\mathbf{1}$ be the constant function that equals 1
+    everywhere. Then:
+    \begin{align}
+        (\Psi \mathbf{1})(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \\
+                                                                  & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \cdot 1
+    \end{align}
+
+    Since each probability distribution sums to 1, applying them sequentially
+    yields:
+    \begin{align}
+        (\Psi \mathbf{1})(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \cdot 1 \\
+                                                                  & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \cdot 1                                                          \\
+                                                                  & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \cdot 1                                                                                           \\
+                                                                  & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \cdot 1 = 1
+    \end{align}
+
+    For the adjoint: Setting $f = \mathbf{1}$ in the adjoint relationship:
+    \begin{align}
+        \langle \mathbf{1}, \Psi^{*}\mu \rangle & = \langle \Psi \mathbf{1}, \mu \rangle = \langle \mathbf{1}, \mu \rangle
+    \end{align}
+
+    where we used the unit preservation property of $\Psi$. This gives:
+    \begin{align}
+        (\Psi^{*}\mu)(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) = \mu(S \times \boldsymbol{B}\times \boldsymbol{\Theta})
+    \end{align}
+
+    \textbf{4. Bound Preservation:}
+
+    For any bounded function $f$ with
+    $\|f\|_{\infty}= \sup_{s,\boldsymbol{b},\boldsymbol{\theta}}|f(s,\boldsymbol{b}
+        ,\boldsymbol{\theta})|$:
+    \begin{align}
+        |(\Psi f)(s, \boldsymbol{b}, \boldsymbol{\theta})| & = \left| \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \right.   \\
+                                                           & \quad \left. \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right|       \\
+                                                           & \leq \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s')               \\
+                                                           & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \left|f(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \right|        \\
+                                                           & \leq \|f\|_{\infty}\sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \\
+                                                           & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) = \|f\|_{\infty}\cdot 1 = \|f\|_{\infty}
+    \end{align}
+
+    Taking the supremum over all $(s, \boldsymbol{b}, \boldsymbol{\theta})$, we get
+    $\|\Psi f\|_{\infty}\leq \|f\|_{\infty}$.
+
+    \textbf{5. Explicit Form of the Adjoint:}
+
+    For any measurable set $A \subset S \times \boldsymbol{B}\times \boldsymbol{\Theta}$:
+    \begin{align}
+        (\Psi^{*}\mu)(A) & = \langle \mathbf{1}_{A}, \Psi^{*}\mu \rangle = \langle \Psi\mathbf{1}_{A}, \mu \rangle
+    \end{align}
+
+    Expanding $\Psi\mathbf{1}_{A}$ using the definition of the transition operator:
+    \begin{align}
+        (\Psi\mathbf{1}_{A})(s,\boldsymbol{b},\boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a})                                                                                                                            \\
+                                                                   & \quad \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \mathbf{1}_{A}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Substituting this back and using the definition of inner product:
+    \begin{align}
+        (\Psi^{*}\mu)(A) & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}(\Psi\mathbf{1}_{A})(s,\boldsymbol{b},\boldsymbol{\theta}) \, d\mu(s, \boldsymbol{b}, \boldsymbol{\theta})                                                                                                                                                          \\
+                         & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}\sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a})                                                                                                                   \\
+                         & \quad \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \mathbf{1}_{A}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \, d\mu(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+\end{proof}
+
+\subsection{Contraction and Propagation}
+
+The properties established above lead to two crucial results: the contraction
+property of the discounted transition operator and the propagation of
+distributions through the adjoint.
+
+\begin{lemma}[Contraction Mapping Property]
+    For any discount factor $\gamma \in [0,1)$, the operator $\gamma \Psi$ is a
+    contraction mapping on the Banach space of bounded functions on
+    $S \times \boldsymbol{B}\times \boldsymbol{\Theta}$ equipped with the supremum
+    norm. Specifically, for any two functions
+    $f, g \in \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$:
+    \begin{align}
+        \|\gamma \Psi f - \gamma \Psi g\|_{\infty}\leq \gamma\|f - g\|_{\infty}
+    \end{align}
+\end{lemma}
+
+\begin{proof}
+    Using the linearity of $\Psi$ and its bound preservation property:
+    \begin{align}
+        \|\gamma \Psi f - \gamma \Psi g\|_{\infty} & = \gamma\|\Psi(f - g)\|_{\infty} \\
+                                                   & \leq \gamma\|f - g\|_{\infty}
+    \end{align}
+
+    Since $\gamma < 1$, $\gamma \Psi$ is a contraction mapping with contraction
+    factor $\gamma$.
+\end{proof}
+
+This contraction property leads directly to the invertibility of
+$I - \gamma\Psi$, a result that is fundamental for characterizing value functions
+in discounted settings.
+
+\begin{lemma}[Invertibility of $I - \gamma \Psi$]
+    For any discount factor $\gamma \in [0,1)$, the operator $I - \gamma \Psi$ is
+    invertible, and its inverse can be represented as a Neumann series:
+    \begin{align}
+        (I - \gamma \Psi)^{-1}= \sum_{t=0}^{\infty}\gamma^{t} \Psi^{t}
+    \end{align}
+
+    which converges absolutely in the operator norm.
+\end{lemma}
+
+\begin{proof}
+    By the Banach fixed-point theorem, if $T$ is a contraction mapping on a Banach
+    space, then $I - T$ is invertible, with inverse given by the Neumann series
+    $\sum_{k=0}^{\infty}T^{k}$. Since $\gamma \Psi$ is a contraction mapping, we
+    have:
+
+    \begin{align}
+        (I - \gamma \Psi)^{-1} & = \sum_{t=0}^{\infty}(\gamma \Psi)^{t} = \sum_{t=0}^{\infty}\gamma^{t} \Psi^{t}
+    \end{align}
+
+    The absolute convergence follows from:
+    \begin{align}
+        \left\|\sum_{t=0}^{\infty}\gamma^{t} \Psi^{t}\right\|_{\infty} & \leq \sum_{t=0}^{\infty}\gamma^{t} \|\Psi^{t}\|_{\infty}\leq \sum_{t=0}^{\infty}\gamma^{t} = \frac{1}{1-\gamma}< \infty
+    \end{align}
+
+    where we use the bound preservation property to establish that $\|\Psi^{t}\|_{\infty}
+        \leq 1$ for all $t$.
+\end{proof}
+
+Finally, we establish how distributions evolve in the system through the adjoint
+operator, formalizing the propagation of probability measures.
+
+\begin{lemma}[Distribution Propagation]
+    If $\mu_{t}$ represents the distribution of the joint process $(s_{t}, \boldsymbol
+        {b}_{t}, \boldsymbol{\theta}_{t})$ at time $t$, then the distribution at time
+    $t+1$ is given by $\mu_{t+1}= \Psi^{*}\mu_{t}$.
+\end{lemma}
+
+\begin{proof}
+    For any measurable function $f \in \mathcal{B}(S \times \boldsymbol{B}\times \boldsymbol
+        {\Theta})$:
+    \begin{align}
+        \langle f, \mu_{t+1}\rangle & = \mathbb{E}[f(s_{t+1}, \boldsymbol{b}_{t+1}, \boldsymbol{\theta}_{t+1})]                                                                     \\
+                                    & = \mathbb{E}[\mathbb{E}[f(s_{t+1}, \boldsymbol{b}_{t+1}, \boldsymbol{\theta}_{t+1}) \mid s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t}]] \\
+                                    & = \mathbb{E}[(\Psi f)(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t})]                                                                    \\
+                                    & = \langle \Psi f, \mu_{t} \rangle = \langle f, \Psi^{*}\mu_{t} \rangle
+    \end{align}
+
+    Since this holds for any measurable function $f$, we have
+    $\mu_{t+1}= \Psi^{*}\mu_{t}$ by the uniqueness of the representing measure.
+\end{proof}
+
+The concepts introduced in this section—the transition operator, its adjoint, and
+their properties—provide the mathematical foundation for analyzing discounted returns
+in Partially Observable Active Markov Games. The transition operator $\Psi$
+captures how function expectations evolve forward in time, while its adjoint $\Psi
+    ^{*}$ describes how probability distributions propagate forward in time. This
+duality is fundamental to establishing the connection between value-based and
+distribution-based perspectives in reinforcement learning.
+
+In the next section, we will use these tools to formulate Bellman equations and derive
+policy gradients for maximizing discounted returns in this complex multi-agent setting.
+\section{Bellman Equations and Value Functions}
+In this section, we establish the fundamental recursive relationships that characterize
+the discounted value functions in Partially Observable Active Markov Games.
+These relationships form the basis for our policy gradient derivation and
+practical algorithms for optimizing agent behavior. We begin by confirming the well-definedness
+of value functions, then establish the Bellman equations, and finally derive the
+gradient expressions necessary for policy optimization.
+\subsection{Well-Definedness of Value Functions}
+Before deriving recursive relationships, we first establish that the value functions
+are well-defined mathematical objects under our assumptions of bounded rewards and
+discount factors less than 1.
+\begin{lemma}[Well-Defined Value Functions]
+    Under the assumptions of bounded rewards and $\gamma < 1$, the discounted
+    value functions $v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})$ and
+    action-value functions
+    $q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})$ are
+    well-defined and finite for all states, belief states, policy parameters, and actions.
+\end{lemma}
+\begin{proof}
+    Assuming rewards are bounded such that $|R^{i}(s, \boldsymbol{a})| \leq R_{\max}$
+    for all $s \in S$ and $\boldsymbol{a}\in A$, we have:
+    \begin{align}
+        |v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta})| & = \left| \mathbb{E}\left[ \sum_{t=0}^{\infty}\gamma^{t} R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right] \right| \\
+                                                                   & \leq \mathbb{E}\left[ \sum_{t=0}^{\infty}\gamma^{t} |R^{i}(s_{t}, \boldsymbol{a}_{t})| \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right]           \\
+                                                                   & \leq R_{\max}\sum_{t=0}^{\infty}\gamma^{t} = \frac{R_{\max}}{1-\gamma}< \infty
+    \end{align}
+
+    Similarly, for the action-value function:
+    \begin{align}
+        |q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})| & = \left| R^{i}(s, \boldsymbol{a}) + \gamma \mathbb{E}[v^{i}_{\theta^i}(s', \boldsymbol{b}', \boldsymbol{\theta}')] \right| \\
+                                                                                   & \leq |R^{i}(s, \boldsymbol{a})| + \gamma \mathbb{E}[|v^{i}_{\theta^i}(s', \boldsymbol{b}', \boldsymbol{\theta}')|]         \\
+                                                                                   & \leq R_{\max}+ \gamma \frac{R_{\max}}{1-\gamma}= \frac{R_{\max}}{1-\gamma}< \infty
+    \end{align}
+
+    Thus, both value functions are well-defined and bounded.
+\end{proof}This lemma ensures that our subsequent derivations involving value
+functions are mathematically sound. The boundedness property is particularly important
+when we consider expectations and derivatives of these functions.
+\subsection{Bellman Equations for Discounted Value Functions}
+Next, we establish the recursive relationships between value functions, which
+are fundamental to dynamic programming approaches.
+\begin{lemma}[Bellman Equation for Discounted Value Functions]
+    In a Partially Observable Active Markov Game, the discounted value function
+    $v^{i}_{\theta^i}$ satisfies the Bellman equation:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    where the action-value function $q^{i}_{\theta^i}$ is defined as:
+    \begin{align}
+        q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) & = R^{i}(s, \boldsymbol{a}) + \gamma \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \nonumber                                                                                 \\
+                                                                                 & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+\end{lemma}
+\begin{proof}
+    By definition, the discounted value function is:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \mathbb{E}\left[ \sum_{t=0}^{\infty}\gamma^{t} R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right]
+    \end{align}
+
+    We can decompose this into the immediate reward and the future discounted
+    returns:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \mathbb{E}\left[ R^{i}(s_{0}, \boldsymbol{a}_{0}) + \gamma \sum_{t=1}^{\infty}\gamma^{t-1}R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right] \\
+                                                                 & = \mathbb{E}\left[ R^{i}(s_{0}, \boldsymbol{a}_{0}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right] \nonumber                                                                \\
+                                                                 & \quad + \gamma \mathbb{E}\left[ \sum_{t=1}^{\infty}\gamma^{t-1}R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right]
+    \end{align}
+
+    For the first term, we have:
+    \begin{align}
+        \mathbb{E}\left[ R^{i}(s_{0}, \boldsymbol{a}_{0}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right] & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) R^{i}(s, \boldsymbol{a})
+    \end{align}
+
+    For the second term, by the law of total expectation:
+    \begin{align}
+         & \mathbb{E}\left[ \sum_{t=1}^{\infty}\gamma^{t-1}R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}=s, \boldsymbol{b}_{0}=\boldsymbol{b}, \boldsymbol{\theta}_{0}=\boldsymbol{\theta}, \pi \right]                                                                                     \\
+         & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \sum_{s'}T(s'|s, \boldsymbol{a}) \nonumber                                                                                                                    \\
+         & \quad \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Combining these two terms and factoring out common terms:
+    \begin{align}
+        v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \Bigg[ R^{i}(s, \boldsymbol{a}) \nonumber                                                                   \\
+                                                                 & \quad + \gamma \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \nonumber                                                                                                             \\
+                                                                 & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \Bigg] \\
+                                                                 & = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    where we define the action-value function $q^{i}_{\theta^i}$ as specified.
+\end{proof}The Bellman equation provides a recursive characterization of the
+value function that forms the basis for dynamic programming algorithms. This equation
+captures how current actions influence both immediate rewards and future value through
+their effects on the environment state, belief states, and policy parameters of other
+agents. The key distinction from standard Bellman equations is the inclusion of
+belief updates and policy parameter dynamics, which reflects the complex dependencies
+in partially observable multi-agent settings.
+\subsection{Policy Gradient with Respect to Value Function}
+Having established the recursive relationship for value functions, we now derive
+how the value function gradient depends on policy parameters, which is essential
+for policy optimization.
+\begin{lemma}[Policy Gradient with Respect to Value Function]
+    The gradient of the value function with respect to policy parameters $\theta^{i}$
+    can be expressed as:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = (I - \gamma \Psi)^{-1}\Bigg[\sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \nonumber                                                        \\
+                                                                                  & \quad \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})\Bigg]
+    \end{align}
+
+    where $\Psi$ is the transition operator defined in the previous section.
+\end{lemma}
+\begin{proof}
+    Taking the gradient of the Bellman equation with respect to $\theta^{i}$:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \nabla_{\theta^i}\left[ \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) \right]
+    \end{align}
+
+    Applying the product rule:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) \nonumber \\
+                                                                                  & \quad + \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) \nabla_{\theta^i}q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    For the gradient of the action-value function:
+    \begin{align}
+        \nabla_{\theta^i}q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) & = \nabla_{\theta^i}\Bigg[ R^{i}(s, \boldsymbol{a}) + \gamma \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \nonumber                                                                \\
+                                                                                                  & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}') \Bigg]
+    \end{align}
+
+    Since $R^{i}(s, \boldsymbol{a})$, $T(s'|s, \boldsymbol{a})$, $\boldsymbol{O}(\boldsymbol
+        {o}'|s')$, and
+    $\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau})$
+    do not depend directly on $\theta^{i}$:
+    \begin{align}
+        \nabla_{\theta^i}q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) & = \gamma \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \nonumber                                                                                                                             \\
+                                                                                                  & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) \nabla_{\theta^i}v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+
+    Using the transition operator $\Psi$, we can rewrite:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) \nonumber \\
+                                                                                  & \quad + \gamma \Psi[\nabla_{\theta^i}v^{i}_{\theta^i}](s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Rearranging:
+    \begin{align}
+        (I - \gamma \Psi)[\nabla_{\theta^i}v^{i}_{\theta^i}](s, \boldsymbol{b}, \boldsymbol{\theta}) & = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \nonumber                                                                              \\
+                                                                                                     & \quad \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    By the lemma on the invertibility of $(I - \gamma \Psi)$, we have:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = (I - \gamma \Psi)^{-1}\Bigg[\sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \nonumber                                                        \\
+                                                                                  & \quad \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})\Bigg] \\
+                                                                                  & = \sum_{t=0}^{\infty}\gamma^{t} \Psi^{t}\Bigg[\sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \nonumber                                        \\
+                                                                                  & \quad \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})\Bigg]
+    \end{align}
+\end{proof}This lemma expresses the value function gradient in terms of an
+infinite sum of expected Q-values weighted by policy gradients and propagated
+through the transition operator. The operator $(I - \gamma \Psi)^{-1}$ captures how
+immediate changes in policy parameters propagate through future timesteps. This
+form of the gradient is central to our discounted policy gradient theorem, which
+we will develop in the next section. The inverse operator can be represented as
+a Neumann series $\sum_{t=0}^{\infty}\gamma^{t} \Psi^{t}$, which has a natural interpretation
+as the accumulated effect of policy changes over an infinite horizon, weighted
+by the discount factor.
+\section{Discounted Visitation Measure}
+The infinite sum formulation derived in the previous sections, while
+mathematically sound, is not directly amenable to practical computation. In this
+section, we reformulate these expressions in terms of a probability distribution,
+which allows for more efficient estimation through sampling-based approaches. This
+reformulation is central to our policy gradient theorem for discounted returns.
+\subsection{Definition and Properties}
+\begin{definition}[Discounted Visitation Measure]
+    For a Markov process governed by a transition operator $\Psi$ and its adjoint $\Psi
+        ^{*}$, with an initial distribution $\mu_{0}$ over the joint state-belief-policy
+    space, the discounted visitation measure $d^{\pi}_{\mu_0}$ is defined as:
+    \begin{equation}
+        d^{\pi}_{\mu_0}:= (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} \mu_{t}
+    \end{equation}
+
+    where $\mu_{t}$ is the distribution at time $t$ when starting from $\mu_{0}$,
+    and $\gamma \in [0, 1)$ is the discount factor.
+\end{definition}This measure represents the expected discounted frequency with which
+different states, belief states, and policy parameters are visited when following
+policy $\pi$ starting from the initial distribution $\mu_{0}$. The normalization
+factor $(1-\gamma)$ ensures that $d^{\pi}_{\mu_0}$ is a proper probability
+distribution, summing to 1 across the entire state-belief-policy space. The discounted
+visitation measure plays a central role in reinforcement learning theory,
+particularly in policy gradient methods. It provides a natural weighting of states
+according to their importance for the discounted objective, as states that are
+visited more frequently or earlier in trajectories receive higher weight. This concept
+generalizes the stationary distribution used in average-reward settings to the discounted
+return framework.
+\begin{lemma}[Evolution of Discounted Visitation]
+    The discounted visitation measure $d^{\pi}_{\mu_0}$ can be expressed in terms of
+    the adjoint operator as:
+    \begin{equation}
+        d^{\pi}_{\mu_0}= (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}
+        = (1-\gamma)(I - \gamma\Psi^{*})^{-1}\mu_{0}
+    \end{equation}
+
+    where $\mu_{0}$ is the initial distribution.
+\end{lemma}
+\begin{proof}
+    By the propagation lemma established earlier,
+    $\mu_{t} = (\Psi^{*})^{t}\mu_{0}$ represents the distribution at time $t$ when
+    starting from $\mu_{0}$. The discounted visitation measure weights these distributions
+    by $\gamma^{t}$ and normalizes by $(1-\gamma)$ to ensure it's a proper probability
+    measure:
+    \begin{align}
+        d^{\pi}_{\mu_0} & = (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} \mu_{t}                \\
+                        & = (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}
+    \end{align}
+
+    The second equality follows from the Neumann series expansion:
+    \begin{align}
+        (I - \gamma\Psi^{*})^{-1} & = \sum_{t=0}^{\infty}(\gamma\Psi^{*})^{t} = \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t}
+    \end{align}
+
+    which converges for $\gamma < 1$ since $\Psi^{*}$ is a non-expansion operator in
+    the total variation norm.
+\end{proof}This establishes the essential connection between the adjoint operator
+and the discounted visitation measure, which is central to the policy gradient
+theorem. The measure $d^{\pi}_{\mu_0}$ represents the normalized expected discounted
+time spent in each state-belief-policy configuration, weighted according to the
+discount factor $\gamma$. This connection allows us to transform expressions involving
+$(I - \gamma\Psi)^{-1}$ in the value function to expectations with respect to $d^{\pi}
+        _{\mu_0}$, which is key for deriving practical policy gradient algorithms.In
+practical implementations, the discounted visitation measure is rarely computed explicitly
+due to the prohibitive computational cost. Instead, sampling-based approaches are
+used to estimate expectations with respect to this measure. The policy gradient
+theorem leverages this measure to derive update rules that can be efficiently
+implemented using trajectory samples collected from the environment.
+
+\subsection{Existence and Uniqueness}
+To provide a rigorous mathematical foundation for our policy gradient theorem,
+we establish the existence and uniqueness of the discounted visitation measure.
+\begin{lemma}[Existence of the Discounted Visitation Measure]
+    Let $\mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$ be the space
+    of finite measures on the joint state-belief-policy space, equipped with the
+    total variation norm. For any initial measure $\mu_{0} \in \mathcal{M}(S \times
+        \boldsymbol{B}\times \boldsymbol{\Theta})$ and discount factor $\gamma \in [0,1
+        )$, the discounted state-visitation measure
+    \begin{align}
+        d^{\pi}_{\mu_0}= (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}
+    \end{align}
+
+    exists and is a well-defined measure in $\mathcal{M}(S \times \boldsymbol{B}\times
+        \boldsymbol{\Theta})$.
+\end{lemma}
+\begin{proof}
+    To establish the existence of $d^{\pi}_{\mu_0}$, we need to prove that the
+    infinite sum $(1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}$
+    converges to a well-defined measure. First, let's recall that
+    $\mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$ equipped with
+    the total variation norm
+    $\|\mu\|_{TV}= \sup_{|f| \leq 1}\left|\int f d\mu\right|$ is a Banach space. Now,
+    we need to show that the series
+    $\sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}$ converges in this space.
+    For any $t \geq 0$, $(\Psi^{*})^{t} \mu_{0}$ represents the measure over the
+    joint state-belief-policy space after $t$ transitions, starting from the initial
+    measure $\mu_{0}$. Since $\Psi^{*}$ is a Markov operator (the adjoint of a Markov
+    transition kernel), it preserves the total mass of a measure: if $\mu_{0}$ is
+    a probability measure (i.e., $\mu_{0}(S \times \boldsymbol{B}\times \boldsymbol
+        {\Theta}) = 1$), then so is $(\Psi^{*})^{t} \mu_{0}$ for all $t \geq 0$.
+    Therefore, $\|(\Psi^{*})^{t} \mu_{0}\|_{TV}= \mu_{0}(S \times \boldsymbol{B}\times
+        \boldsymbol{\Theta})$ for all $t \geq 0$. For a general finite measure
+    $\mu_{0}$ with total mass
+    $M = \mu_{0}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$, we have $\|(\Psi
+        ^{*})^{t} \mu_{0}\|_{TV}= M$ for all $t \geq 0$. Now, consider the partial sum:
+    \begin{align}
+        S_{n} = (1-\gamma) \sum_{t=0}^{n}\gamma^{t} (\Psi^{*})^{t} \mu_{0}
+    \end{align}
+
+    For $n < m$, the difference between two partial sums is:
+    \begin{align}
+        \|S_{m} - S_{n}\|_{TV} & = \left\| (1-\gamma) \sum_{t=n+1}^{m}\gamma^{t} (\Psi^{*})^{t} \mu_{0} \right\|_{TV} \\
+                               & \leq (1-\gamma) \sum_{t=n+1}^{m}\gamma^{t} \|(\Psi^{*})^{t} \mu_{0}\|_{TV}           \\
+                               & = (1-\gamma) M \sum_{t=n+1}^{m}\gamma^{t}                                            \\
+                               & = (1-\gamma) M (\gamma^{n+1}+ \gamma^{n+2}+ \ldots + \gamma^{m})                     \\
+                               & = (1-\gamma) M \gamma^{n+1}\frac{1 - \gamma^{m-n}}{1 - \gamma}                       \\
+                               & = M \gamma^{n+1}(1 - \gamma^{m-n})
+    \end{align}
+
+    As $n \to \infty$, $\gamma^{n+1}\to 0$ (since $\gamma < 1$), which means that
+    the sequence of partial sums $\{S_{n}\}$ is Cauchy in the Banach space
+    $\mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$. By the completeness
+    of this space, the sequence converges to a measure which we denote as
+    $d^{\pi}_{\mu_0}$. Moreover, the total mass of $d^{\pi}_{\mu_0}$ is:
+    \begin{align}
+        d^{\pi}_{\mu_0}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) & = (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) \\
+                                                                           & = (1-\gamma) M \sum_{t=0}^{\infty}\gamma^{t}                                                                         \\
+                                                                           & = (1-\gamma) M \frac{1}{1-\gamma}                                                                                    \\
+                                                                           & = M
+    \end{align}
+
+    Thus, $d^{\pi}_{\mu_0}$ is a finite measure with the same total mass as $\mu_{0}$.
+\end{proof}Having established existence, we now turn to the uniqueness of the discounted
+visitation measure.
+
+\begin{lemma}[Uniqueness of the Discounted Visitation Measure]
+    The discounted state-visitation measure $d^{\pi}_{\mu_0}$ is the unique solution
+    to the functional equation:
+    \begin{align}
+        d^{\pi}_{\mu_0}= (1-\gamma)\mu_{0} + \gamma \Psi^{*} d^{\pi}_{\mu_0}
+    \end{align}
+
+    in the space of finite measures $\mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol
+        {\Theta})$.
+\end{lemma}
+\begin{proof}
+    First, we verify that
+    $d^{\pi}_{\mu_0}= (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}$
+    satisfies the functional equation:
+
+    \begin{align}
+        (1-\gamma)\mu_{0} + \gamma \Psi^{*} d^{\pi}_{\mu_0} & = (1-\gamma)\mu_{0} + \gamma \Psi^{*} \left( (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0} \right) \\
+                                                            & = (1-\gamma)\mu_{0} + \gamma (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t+1}\mu_{0}                        \\
+                                                            & = (1-\gamma)\mu_{0} + (1-\gamma) \sum_{t=1}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}                                \\
+                                                            & = (1-\gamma) \left( \mu_{0} + \sum_{t=1}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0} \right)                           \\
+                                                            & = (1-\gamma) \sum_{t=0}^{\infty}\gamma^{t} (\Psi^{*})^{t} \mu_{0}                                                    \\
+                                                            & = d^{\pi}_{\mu_0}
+    \end{align}
+
+    To prove uniqueness, suppose there exists another measure
+    $\tilde{d}\in \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$
+    that satisfies the functional equation:
+    \begin{align}
+        \tilde{d}= (1-\gamma)\mu_{0} + \gamma \Psi^{*} \tilde{d}
+    \end{align}
+
+    Let's consider the operator
+    $T: \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta}) \to \mathcal{M}
+        (S \times \boldsymbol{B}\times \boldsymbol{\Theta})$
+    defined as:
+    \begin{align}
+        T(\mu) = (1-\gamma)\mu_{0} + \gamma \Psi^{*} \mu
+    \end{align}
+
+    For any two measures
+    $\mu, \nu \in \mathcal{M}(S \times \boldsymbol{B}\times \boldsymbol{\Theta})$:
+    \begin{align}
+        \|T(\mu) - T(\nu)\|_{TV} & = \|\gamma \Psi^{*} \mu - \gamma \Psi^{*} \nu\|_{TV} \\
+                                 & = \gamma \|\Psi^{*} (\mu - \nu)\|_{TV}               \\
+                                 & \leq \gamma \|\mu - \nu\|_{TV}
+    \end{align}
+
+    Since $\gamma < 1$, $T$ is a contraction mapping on the Banach space $\mathcal{M}
+        (S \times \boldsymbol{B}\times \boldsymbol{\Theta})$ with contraction factor $\gamma$.
+    By the Banach fixed-point theorem, $T$ has a unique fixed point. We've already
+    shown that $d^{\pi}_{\mu_0}$ is a fixed point of $T$, and by assumption,
+    $\tilde{d}$ is also a fixed point. Therefore, $d^{\pi}_{\mu_0}= \tilde{d}$, proving
+    the uniqueness of the discounted state-visitation measure.
+\end{proof}
+
+\subsection{Connection to Value Function}
+Having established the theoretical properties of the discounted visitation
+measure, we now connect it to the value function, which will provide important
+insights later on.
+
+\begin{lemma}[Value Function as Inner Product]
+    For any discount factor $\gamma \in [0,1)$ and initial state $s_{0}$, belief
+    state $\boldsymbol{b}_{0}$, and policy parameter $\boldsymbol{\theta}_{0}$,
+    the value function can be expressed as:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \frac{1}{1-\gamma}\int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    where $\mu_{0} = \delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}$ is
+    the Dirac measure concentrated at
+    $(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})$, and $r^{i}$ is the expected
+    immediate reward function:
+    \begin{align}
+        r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) R^{i}(s, \boldsymbol{a})
+    \end{align}
+\end{lemma}
+\begin{proof}
+    Let $\mu_{0} = \delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}$ be the
+    Dirac measure concentrated at the point $(s_{0}, \boldsymbol{b}_{0}, \boldsymbol
+        {\theta}_{0})$. By definition of the value function:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \mathbb{E}\left[ \sum_{t=0}^{\infty}\gamma^{t} R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}, \pi \right] \\
+                                                                             & = \sum_{t=0}^{\infty}\gamma^{t} \mathbb{E}\left[ R^{i}(s_{t}, \boldsymbol{a}_{t}) \bigg| s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}, \pi \right]
+    \end{align}
+
+    Define the expected immediate reward function
+    $r^{i}: S \times \boldsymbol{B}\times \boldsymbol{\Theta}\to \mathbb{R}$ as:
+    \begin{align}
+        r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) = \sum_{a^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{\neg i}}\pi^{\neg i}(a^{\neg i}|b^{\neg i}; \theta^{\neg i}) R^{i}(s, \boldsymbol{a})
+    \end{align}
+
+    Then:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \sum_{t=0}^{\infty}\gamma^{t} \mathbb{E}\left[ r^{i}(s_{t}, \boldsymbol{b}_{t}, \boldsymbol{\theta}_{t}) \bigg| s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}, \pi \right]       \\
+                                                                             & = \sum_{t=0}^{\infty}\gamma^{t} \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{t}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    where $\mu_{t}$ is the distribution over the joint state-belief-policy space
+    at time $t$, starting from $\mu_{0}$. From previous lemmas, we know that $\mu_{t}
+        = (\Psi^{*})^{t} \mu_{0}$. Using the duality relationship between functions
+    and measures:
+    \begin{align}
+        \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{t}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d((\Psi^{*})^{t}\mu_{0})(s, \boldsymbol{b}, \boldsymbol{\theta}) \\
+                                                                                                                                                                & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}(\Psi^{t} r^{i})(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Therefore:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \sum_{t=0}^{\infty}\gamma^{t} \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}(\Psi^{t} r^{i})(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta})              \\
+                                                                             & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}\left(\sum_{t=0}^{\infty}\gamma^{t} (\Psi^{t} r^{i})(s, \boldsymbol{b}, \boldsymbol{\theta})\right) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta}) \\
+                                                                             & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}((I - \gamma \Psi)^{-1}r^{i})(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Since $\mu_{0} = \delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}$, we have:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = ((I - \gamma \Psi)^{-1}r^{i})(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})
+    \end{align}
+
+    Alternatively, using the duality between $(I - \gamma \Psi)^{-1}$ and
+    $(I - \gamma \Psi^{*})^{-1}$:
+    \begin{align}
+        \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}((I - \gamma \Psi)^{-1}r^{i})(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d((I - \gamma \Psi^{*})^{-1}\mu_{0})(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    From previous lemmas, we know that $d^{\pi}_{\mu_0}= (1-\gamma) (I - \gamma \Psi
+        ^{*})^{-1}\mu_{0}$. Therefore:
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d((I - \gamma \Psi^{*})^{-1}\mu_{0})(s, \boldsymbol{b}, \boldsymbol{\theta}) \\
+                                                                             & = \int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) \frac{d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})}{1-\gamma}     \\
+                                                                             & = \frac{1}{1-\gamma}\int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+\end{proof}This lemma establishes that the value function can be expressed as an
+expectation with respect to the discounted visitation measure, with an appropriate
+scaling factor. This formulation provides a direct link between the value
+function and the distribution of states.
+
+\section{Policy Gradient Theorem}
+Having established the mathematical foundations for discounted returns in
+partially observable multi-agent settings, we now derive the policy gradient theorem
+that forms the basis for practical optimization algorithms. This theorem
+provides a principled expression for computing gradients of the expected
+discounted return with respect to policy parameters, enabling efficient policy improvement.
+The policy gradient theorem connects an agent's policy parameters to its
+expected long-term performance through the discounted visitation measure, providing
+a mathematically rigorous foundation for optimization.
+
+\begin{theorem}[Partially Observable Active Discounted Return Policy Gradient
+        Theorem]
+    The gradient of the discounted return objective $J^{i}_{\pi, \gamma}(\theta^{i}) = v
+            ^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})$ with respect
+    to agent $i$'s policy parameters $\theta^{i}$ in a partially observable active
+    Markov game setting can be expressed as:
+    \begin{align}
+        \nabla_{\theta^i}J^{i}_{\pi, \gamma}(\theta^{i}) & = \frac{1}{1-\gamma}\sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \nonumber \\
+                                                         & \quad \sum_{a^{-i}}\pi^{-i}(a^{-i}|\boldsymbol{b}^{-i}; \theta^{-i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    where $d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})$ is the discounted
+    visitation measure starting from initial distribution $\mu_{0}$, and
+    $q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})$ is
+    the action-value function defined as:
+    \begin{align}
+        q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) & = R^{i}(s, \boldsymbol{a}) + \gamma \sum_{s'}T(s'|s, \boldsymbol{a}) \sum_{\boldsymbol{o}'}\boldsymbol{O}(\boldsymbol{o}'|s') \nonumber                                                                                 \\
+                                                                                 & \quad \sum_{\boldsymbol{\theta}'}\boldsymbol{U}(\boldsymbol{\theta}'|\boldsymbol{\theta}, \boldsymbol{\tau}) v^{i}_{\theta^i}(s', \text{update}(\boldsymbol{b}, \boldsymbol{a}, \boldsymbol{o}'), \boldsymbol{\theta}')
+    \end{align}
+\end{theorem}We now provide a detailed proof of the policy gradient theorem, building
+on the lemmas established in previous sections.
+\begin{proof}
+    From our previous lemma, we know that the gradient of the value function can be
+    expressed as:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = (I - \gamma \Psi)^{-1}\left[\sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{-i}}\pi^{-i}(a^{-i}|\boldsymbol{b}^{-i}; \theta^{-i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})\right]
+    \end{align}
+
+    For notational clarity, we define the term inside the brackets as:
+    \begin{align}
+        g(s, \boldsymbol{b}, \boldsymbol{\theta}) = \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{-i}}\pi^{-i}(a^{-i}|\boldsymbol{b}^{-i}; \theta^{-i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    Now we can write:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}) & = (I - \gamma \Psi)^{-1}g(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    For our specific initial state configuration
+    $(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})$:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = ((I - \gamma \Psi)^{-1}g)(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})
+    \end{align}
+
+    Let's define
+    $\mu_{0} = \delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}$, which is the
+    Dirac measure concentrated at the initial state. We can view
+    $((I - \gamma \Psi)^{-1}g)(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})$
+    as the integration of the function $(I - \gamma \Psi)^{-1}g$ against this
+    Dirac measure:
+
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = ((I - \gamma \Psi)^{-1}g)(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})                                                                                           \\
+                                                                                              & = \int ((I - \gamma \Psi)^{-1}g)(s, \boldsymbol{b}, \boldsymbol{\theta}) d\delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Recall the duality principle we established earlier, which states that:
+    \begin{align}
+        \int ((I - \gamma \Psi)^{-1}f)(x) d\mu(x) = \int f(x) d((I - \gamma \Psi^{*})^{-1}\mu)(x)
+    \end{align}
+
+    Allowing us to move the operator from acting on the function $g$ to acting on
+    the measure $\mu_{0}$:
+    \begin{align}
+        \int ((I - \gamma \Psi)^{-1}g)(s, \boldsymbol{b}, \boldsymbol{\theta}) d\mu_{0}(s, \boldsymbol{b}, \boldsymbol{\theta}) = \int g(s, \boldsymbol{b}, \boldsymbol{\theta}) d((I - \gamma \Psi^{*})^{-1}\mu_{0})(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Therefore:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \int g(s, \boldsymbol{b}, \boldsymbol{\theta}) d((I - \gamma \Psi^{*})^{-1}\delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)})(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    From our earlier derivation of the discounted visitation measure, we established
+    that:
+    \begin{align}
+        d^{\pi}_{\mu_0}= (1-\gamma)(I - \gamma \Psi^{*})^{-1}\mu_{0} = (1-\gamma)(I - \gamma \Psi^{*})^{-1}\delta_{(s_0, \boldsymbol{b}_0, \boldsymbol{\theta}_0)}
+    \end{align}
+
+    We can now substitute this expression:
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) & = \int g(s, \boldsymbol{b}, \boldsymbol{\theta}) d\left(\frac{d^{\pi}_{\mu_0}}{1-\gamma}\right)(s, \boldsymbol{b}, \boldsymbol{\theta}) \\
+                                                                                              & = \frac{1}{1-\gamma}\int g(s, \boldsymbol{b}, \boldsymbol{\theta}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    Substituting the definition of $g(s, \boldsymbol{b}, \boldsymbol{\theta})$ back:
+    \begin{align}
+        \nabla_{\theta^i}J^{i}_{\pi, \gamma}(\theta^{i}) & = \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0})                                                                                                                                                                                                                                                  \\
+                                                         & = \frac{1}{1-\gamma}\int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}\sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{-i}}\pi^{-i}(a^{-i}|\boldsymbol{b}^{-i}; \theta^{-i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    For finite state, belief, and policy parameter spaces, this integral can be
+    written as a sum:
+    \begin{align}
+        \nabla_{\theta^i}J^{i}_{\pi, \gamma}(\theta^{i}) & = \frac{1}{1-\gamma}\sum_{s, \boldsymbol{b}, \boldsymbol{\theta}}d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta}) \sum_{a^i}\nabla_{\theta^i}\pi^{i}(a^{i}|b^{i}; \theta^{i}) \sum_{a^{-i}}\pi^{-i}(a^{-i}|\boldsymbol{b}^{-i}; \theta^{-i}) q^{i}_{\theta^i}(s, \boldsymbol{b}, \boldsymbol{\theta}, \boldsymbol{a})
+    \end{align}
+
+    This completes the proof of the Partially Observable Active Discounted Return
+    Policy Gradient Theorem.
+\end{proof}
+
+The proof reveals a symmetry in the mathematical structure of our results.
+\begin{remark}[Symmetry]
+    From the Value Function as Inner Product lemma, the value function
+    \begin{align}
+        v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) = \frac{1}{1-\gamma}\int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}r^{i}(s, \boldsymbol{b}, \boldsymbol{\theta}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    is an expectation of immediate rewards $r^{i}$ under the discounted visitation
+    measure $d^{\pi}_{\mu_0}$. While its gradient
+    \begin{align}
+        \nabla_{\theta^i}v^{i}_{\theta^i}(s_{0}, \boldsymbol{b}_{0}, \boldsymbol{\theta}_{0}) = \frac{1}{1-\gamma}\int_{S \times \boldsymbol{B} \times \boldsymbol{\Theta}}g(s, \boldsymbol{b}, \boldsymbol{\theta}) d^{\pi}_{\mu_0}(s, \boldsymbol{b}, \boldsymbol{\theta})
+    \end{align}
+
+    is an expectation of policy-gradient-weighted action values $g$ under the same
+    discounted visitation measure $d^{\pi}_{\mu_0}$.
+\end{remark}
+This symmetric structure provides not only mathematical elegance but also
+practical advantages. It means that the same samples from the discounted visitation
+distribution can be used to estimate both values and policy gradients.
+
+The policy gradient theorem provides the mathematical foundation for agents to optimize
+their policies in ways that account for both the partial observability of the environment
+and the learning dynamics of other agents. This enables sophisticated strategic
+behaviors such as information revelation, teaching, and influence that are
+essential in social learning contexts.
+
+\chapter{POLARIS Architecture}
+\label{appendix:neural_architectures}
+
+This section provides detailed technical specifications of all neural network architectures used in our POLARIS implementation. We describe each component's structure, activation functions, and design considerations to enable reproducibility and thorough understanding of our approach.
+
+\section{Belief Processing Module}
+
+In our POLARIS implementation, agents maintain and update belief states using a Transformer-based architecture~\cite{vaswani2017attention}, which effectively processes sequential observations while preserving the temporal relationships critical for social learning tasks.
+
+The TransformerBeliefProcessor replaces traditional recurrent architectures with a self-attention mechanism that can capture complex dependencies across observation sequences. The module takes a signal (private observation), neighbor actions, and the current belief state as inputs, then produces an updated belief state and belief distribution over possible environmental states.
+
+The belief processor begins with an input projection layer that maps the concatenated signal and neighbor action vectors to a hidden dimension. Specifically, for an agent receiving signal $o_t$ and observing neighbor actions $\boldsymbol{a}_t$, the input vector $x_t = [o_t, \boldsymbol{a}_t]$ is projected as:
+
+\begin{equation}
+    x_{\text{projected}} = W_{\text{proj}}x_t + b_{\text{proj}}
+\end{equation}
+
+This projection is then passed through a transformer encoder with multi-head self-attention. The transformer encoder consists of attention layers defined as:
+
+\begin{equation}
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+\end{equation}
+
+where $Q$, $K$, and $V$ are the query, key, and value matrices derived from the input, and $d_k$ is the dimensionality of the key vectors. The multi-head attention mechanism applies this attention function in parallel across multiple representation subspaces, then concatenates the results:
+
+\begin{equation}
+    \text{MultiHead}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)W^O
+\end{equation}
+
+where each head is computed as $\text{head}_i = \text{Attention}(XW^Q_i, XW^K_i, XW^V_i)$. Our implementation uses 4 attention heads with a dimension of 64 per head.
+
+The transformer encoder is followed by feed-forward networks with ReLU activations:
+
+\begin{equation}
+    \text{FFN}(x) = \max(0, xW_1 + b_1)W_2 + b_2
+\end{equation}
+
+A belief head at the output projects the transformed representation to a probability distribution over possible environment states:
+
+\begin{equation}
+    b_{\text{dist}} = \text{softmax}(W_{\text{belief}}h_{\text{final}} + b_{\text{belief}})
+\end{equation}
+
+Where $h_{\text{final}}$ is the final hidden state from the transformer. This distribution represents the agent's belief about the current environmental state. The transformed representation also becomes the new belief state that is maintained across time steps.
+
+The transformer architecture offers several advantages for belief processing in partially observable environments. First, it can model arbitrarily long-range dependencies in observation sequences without the vanishing gradient issues that affect recurrent networks. Second, the self-attention mechanism provides a natural way to weight the importance of different observations in forming beliefs. Third, the positional encodings allow the model to incorporate temporal information while maintaining permutation invariance within each time step.
+
+\section{Inference Learning Module}
+
+The Inference Learning Module enables agents to predict and model the behavior of other agents, which is essential for effective social learning. POLARIS implements a Graph Neural Network (GNN) approach for this module, which explicitly captures the network structure of agent interactions.
+
+The GNN-based inference module represents agents and their interactions as a graph, where nodes correspond to agents and edges represent observational relationships. For each node, features include the agent's observation and action.
+
+The graph representation treats each agent as a node, with edges representing observational relationships. The GNN uses graph attention layers (GAT) that compute attention coefficients between connected nodes:
+
+\begin{equation}
+    e_{ij} = \text{LeakyReLU}(a^T[Wh_i || Wh_j])
+\end{equation}
+\begin{equation}
+    \alpha_{ij} = \frac{\exp(e_{ij})}{\sum_{k \in \mathcal{N}_i} \exp(e_{ik})}
+\end{equation}
+
+where $h_i$ represents the features of node $i$, $W$ is a learned weight matrix, $a$ is an attention vector, and $\mathcal{N}_i$ is the neighborhood of node $i$. The node representations are then updated using these attention weights:
+
+\begin{equation}
+    h'_i = \sigma\left(\sum_{j \in \mathcal{N}_i} \alpha_{ij} W h_j\right)
+\end{equation}
+
+The temporal aspect is handled through a window-based memory system that maintains a history of previous graph states. A multi-head attention mechanism operates across this temporal window:
+
+\begin{equation}
+    \text{TemporalAttention}(X_t, X_{t-1:t-k}) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
+\end{equation}
+
+where $X_t$ is the current graph representation, $X_{t-1:t-k}$ represents previous graph states, and $Q$, $K$, $V$ are learned projections. The GNN implementation uses configurable parameters for the number of graph layers (default: 2), attention heads (default: 4), and temporal window size (default: 5).
+
+The GNN receives a combination of the current latent estimate, the agent's observations, actions, and rewards. Formally, its input for agent $i$ is defined as $x_i = [\hat{\boldsymbol{z}}^{-i}_{t}, o^{i}_{t}, \boldsymbol{a}_{t}, r^{i}_{t}, o^{i}_{t+1}]$, where $\hat{\boldsymbol{z}}^{-i}_{t} \in \mathbb{R}^{d}$ represents the current estimate of other agents' latent states with dimension $d=256$ in our implementation.
+
+After processing through the graph layers and temporal attention mechanism, the GNN outputs parameters of a Gaussian distribution over the next latent state:
+
+\begin{equation}
+    \mu_{t} = W_{\mu}h^{\text{final}}_i + b_{\mu}
+\end{equation}
+\begin{equation}
+    \log\sigma_{t} = W_{\sigma}h^{\text{final}}_i + b_{\sigma}
+\end{equation}
+
+where $\mu_{t}$ is the mean vector and $\log\sigma_{t}$ is the log-standard-deviation vector of the distribution, and $h^{\text{final}}_i$ is the final node representation for agent $i$.
+
+The GNN also outputs an opponent belief distribution through a separate head:
+
+\begin{equation}
+    p_{\text{opp}} = \text{softmax}(W_{\text{opp}}h^{\text{final}}_i + b_{\text{opp}})
+\end{equation}
+
+This distribution represents the agent's prediction of other agents' beliefs about the environment state.
+
+The latent variables are sampled using the reparameterization trick to enable backpropagation:
+
+\begin{equation}
+    \hat{\boldsymbol{z}}^{-i}_{t+1} = \mu_{t} + \exp(0.5 \cdot \log\sigma_{t}) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+\end{equation}
+
+The GNN-based inference module is trained using the Evidence Lower Bound (ELBO) objective function:
+
+\begin{equation}
+    J^{i}_{\text{elbo}} = \mathbb{E}[\log \mathbb{P}(\boldsymbol{a}^{-i}_{t}|o^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}) - \alpha_{\text{KL}}D_{\text{KL}}(\mathcal{N}(\hat{\boldsymbol{z}}^{-i}_{t+1}|\tau^i_t) || \mathcal{N}(\hat{\boldsymbol{z}}^{-i}_{t}))]
+\end{equation}
+
+where the first term represents the reconstruction log-likelihood and the second term is a KL divergence regularization that encourages temporal consistency in the latent space. The hyperparameter $\alpha_{\text{KL}}$ controls the strength of this regularization.
+
+
+\section{Reinforcement Learning Module}
+
+The reinforcement learning module optimizes the agent's policy based on beliefs, inferences about other agents, and received rewards. POLARIS implements a soft actor-critic (SAC)~\cite{haarnoja2018soft} framework that balances exploitation with exploration through entropy regularization.
+
+\subsection{Policy Network Architecture}
+
+The policy network translates belief states and inferred latent variables into action decisions. It represents the agent's strategy for maximizing long-term rewards in the social learning environment. The policy network takes the agent's belief state and the inferred latent variables of other agents as input: $x_{\pi} = [b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}]$.
+
+The policy is implemented as an MLP with ReLU activations across multiple hidden layers:
+
+\begin{equation}
+    h^1_{\pi} = \text{ReLU}(W^1_{\pi}x_{\pi} + b^1_{\pi})
+\end{equation}
+\begin{equation}
+    h^2_{\pi} = \text{ReLU}(W^2_{\pi}h^1_{\pi} + b^2_{\pi})
+\end{equation}
+
+Each hidden layer contains 256 units. For discrete action spaces, the policy outputs action probabilities:
+
+\begin{equation}
+    \pi^{i}(a^{i}|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = \text{softmax}(W_{\text{out}}h^2_{\pi} + b_{\text{out}})
+\end{equation}
+
+where $W_{\text{out}}$ and $b_{\text{out}}$ are part of the policy parameters $\theta^{i}$.
+
+For continuous action spaces, the policy outputs the mean and log standard deviation of a Gaussian distribution:
+
+\begin{equation}
+    \mu(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = W_{\mu}h^2_{\pi} + b_{\mu}
+\end{equation}
+\begin{equation}
+    \log\sigma(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = W_{\sigma}h^2_{\pi} + b_{\sigma}
+\end{equation}
+
+To sample actions for continuous spaces, we use the reparameterization trick, which enables gradient flow through the sampling process:
+
+\begin{equation}
+    a^i_{\text{raw}} = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+\end{equation}
+
+A squashing function (tanh) is then applied to bound the actions within the range $[-1, 1]$:
+
+\begin{equation}
+    a^i = \tanh(a^i_{\text{raw}})
+\end{equation}
+
+This bounded action can be scaled to the appropriate range required by the environment. When using this squashing function, the log probability calculation must be adjusted using the change of variables formula:
+
+\begin{equation}
+    \log \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i) = \log \mathcal{N}(a^i_{\text{raw}}|\mu, \sigma) - \sum_{j} \log(1 - \tanh^2(a^i_{\text{raw},j}))
+\end{equation}
+
+where the second term is the logarithm of the absolute determinant of the Jacobian of the tanh transformation.
+
+Following the soft actor-critic framework, the policy is trained to maximize both expected returns and entropy:
+
+\begin{equation}
+    J^{i}_{\pi}(\theta^{i}) = \mathbb{E}[\min_{\beta=1,2}q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, a^{i}_{t}; \psi^{i}_{\beta}) + \alpha_e H(\pi^{i}(\cdot|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}))]
+\end{equation}
+
+where $\alpha_e$ is the entropy weight (temperature parameter) that controls the balance between exploitation and exploration. Higher values of $\alpha_e$ encourage more exploration.
+
+For discrete action spaces, the entropy is calculated directly from the action probabilities:
+\begin{equation}
+    H(\pi^{i}) = -\sum_{a^i} \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i) \log \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i)
+\end{equation}
+
+For continuous action spaces, the entropy of the base Gaussian distribution is used:
+\begin{equation}
+    H(\pi^{i}) = \frac{1}{2}\log\det(2\pi e \sigma^2(b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i))
+\end{equation}
+
+When using the tanh squashing function, this entropy calculation must be adjusted to account for the change in probability density.
+
+\subsection{Value Network Architecture}
+
+The value network estimates the expected future rewards for state-action pairs, providing the foundation for policy optimization. POLARIS implements a dual critic approach to mitigate overestimation bias, a common issue in Q-learning algorithms.
+
+The value network receives the belief state, inferred latent variables, and joint action as input: $x_{q} = [b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}]$. Each value network follows an MLP architecture with three hidden layers:
+
+\begin{equation}
+    h^1_{q} = \text{ReLU}(W^1_{q}x_{q} + b^1_{q})
+\end{equation}
+\begin{equation}
+    h^2_{q} = \text{ReLU}(W^2_{q}h^1_{q} + b^2_{q})
+\end{equation}
+\begin{equation}
+    h^3_{q} = \text{ReLU}(W^3_{q}h^2_{q} + b^3_{q})
+\end{equation}
+
+Each hidden layer contains 256 units. The network outputs a scalar value estimate:
+
+\begin{equation}
+    q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}; \psi^{i}_{\beta}) = W_{q,\text{out}}h^3_{q} + b_{q,\text{out}}
+\end{equation}
+
+where $\beta \in \{1, 2\}$ indicates which of the two value networks is being used. The value function is trained using the soft Bellman equation, which incorporates the entropy-regularized objective:
+
+\begin{equation}
+    y = r^{i}_{t} - \rho^{i}_{\theta^i} + v^{i}_{\theta^i}(b^{i}_{t+1}, \hat{\boldsymbol{z}}^{-i}_{t+1}; \bar{\psi}^{i}_{\beta})
+\end{equation}
+\begin{equation}
+    J^{i}_{q}(\psi^{i}_{\beta}, \rho^{i}_{\theta^i}) = \mathbb{E}[(y - q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}; \psi^{i}_{\beta}))^{2}]
+\end{equation}
+
+where $\bar{\psi}^{i}_{\beta}$ are the target network parameters, updated using an exponential moving average:
+
+\begin{equation}
+    \bar{\psi}^{i}_{\beta} \leftarrow \tau_{q}\psi^{i}_{\beta} + (1 - \tau_{q})\bar{\psi}^{i}_{\beta}
+\end{equation}
+
+with $\tau_{q} = 0.005$ in our implementation. The term $\rho^{i}_{\theta^i}$ represents the average reward, which is used for differential returns in continuing tasks. The soft value function incorporates policy entropy:
+
+\begin{equation}
+    v^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}) = \mathbb{E}_{a^i \sim \pi^i(\cdot|b^i_t,\hat{\boldsymbol{z}}^{-i}_t;\theta^i)}[\min_{\beta=1,2}q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, a^{i}_{t}; \psi^{i}_{\beta})] + \alpha_e H(\pi^{i}(\cdot|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}))
+\end{equation}
+
+POLARIS can operate in both discounted and average reward modes. In discounted mode, the target is simply $y = r^{i}_{t} + \gamma \cdot v^{i}_{\theta^i}(b^{i}_{t+1}, \hat{\boldsymbol{z}}^{-i}_{t+1}; \bar{\psi}^{i}_{\beta})$, where $\gamma$ is the discount factor. In average reward mode, the differential returns formulation with $\rho^{i}_{\theta^i}$ is used instead.
+
+The value network architecture directly implements our theoretical framework of active Markov games, estimating returns that account for the influence of current actions on future environmental states and the policy parameters of other agents.
+
+\section{Elastic Weight Consolidation}
+
+POLARIS implements Elastic Weight Consolidation (EWC)~\cite{kirkpatrick2017overcoming} to prevent catastrophic forgetting when agents need to maintain performance across multiple tasks or environments. EWC adds a regularization term to the loss function that penalizes large changes to parameters that were important for previously learned tasks.
+
+The EWC loss is defined as:
+
+\begin{equation}
+    \mathcal{L}_{\text{EWC}} = \lambda \sum_{i} F_i (\theta^i - {\theta^i}^*)^2
+\end{equation}
+
+where $\lambda$ is the importance factor, $F_i$ is the Fisher information for parameter $\theta^i$, and ${\theta^i}^*$ is the optimal parameter value for the previous task. The Fisher information matrix is calculated by:
+
+\begin{equation}
+    F = \mathbb{E}_{x \sim \mathcal{D}, y \sim \mathbb{P}(y|x; \theta)} \left[ \nabla_\theta \log \mathbb{P}(y|x; \theta) \nabla_\theta \log \mathbb{P}(y|x; \theta)^T \right]
+\end{equation}
+
+In practice, POLARIS approximates this using samples from the replay buffer. The implementation offers both standard EWC and online EWC variants. The online variant continuously updates the Fisher matrix with a decay factor, allowing for sequential learning across multiple tasks without storing separate Fisher matrices:
+
+\begin{equation}
+    F_{\text{new}} = \gamma F_{\text{old}} + F_{\text{current}}
+\end{equation}
+
+where $\gamma$ is a decay factor typically set to 0.95. EWC is particularly valuable in social learning contexts where agents may need to adapt to different partner policies without forgetting effective strategies learned previously.
+
+In practice, all these neural network components operate in tandem, with the belief state processor tracking the environmental state, the inference module predicting other agents' behavior, and the reinforcement learning module optimizing the agent's policy. This integrated approach enables POLARIS to effectively navigate the complexities of partially observable multi-agent environments with non-stationary dynamics.
+
+\section{Implementation Details}
+
+POLARIS incorporates several crucial implementation details that enhance its performance in social learning environments. Double Q-learning is employed to prevent overestimation bias, a common issue in value-based reinforcement learning methods. This approach maintains two separate Q-networks and uses the minimum of their predictions for target value calculations, providing a more pessimistic and reliable estimate of expected returns. Such conservative value estimation is particularly important in social learning, where overestimated values can lead to overly aggressive strategies that fail to account for the strategic adaptations of other agents.
+
+Temperature scaling is applied to softmax outputs in the belief distribution calculations, controlling the sharpness of the resulting probability distributions. This technique produces more stable belief distributions, preventing premature convergence to overly confident beliefs based on limited evidence. The temperature parameter can be adjusted to balance exploration and exploitation in the belief space, with higher values producing more uniform distributions that encourage consideration of alternative hypotheses about the environment state.
+
+For robust latent sampling from the variational posterior, POLARIS employs several numerical stability safeguards. These include clamping log-variances to prevent extreme values, enforcing minimum and maximum bounds on variances, and using epsilon terms to avoid division by zero or other numerical instabilities. These precautions are essential when working with variational methods in complex, high-dimensional spaces, ensuring reliable performance even with noisy or ambiguous social signals.
+
+Gradient clipping is applied across all network updates to prevent exploding gradients, a common issue in deep reinforcement learning, especially with recurrent or transformer architectures. By limiting the maximum gradient norm, POLARIS maintains stable training even when encountering unusual observations or reward patterns. Additionally, separate optimizers are maintained for each network component, allowing for different learning rates and optimization strategies tailored to the specific characteristics of each module.
+
+The POLARIS implementation significantly advances beyond the original FURTHER framework by introducing sophisticated belief modeling through Transformers, network-aware representations via GNNs, advantage-weighted Transformer training, and catastrophic forgetting prevention through EWC. These enhancements enable more effective learning in the complex, partially observable social environments that characterize our theoretical framework. By integrating these components into a cohesive algorithm, POLARIS provides a practical realization of the theoretical Partially Observable Active Markov Game framework, offering a powerful tool for studying social learning dynamics across various network topologies and environmental conditions.
+
+\chapter{Social Learning Implementation}
+
+This chapter presents the technical implementation details of our social learning models within the Partially Observable Active Markov Game framework. We provide a comprehensive account of the algorithmic approaches, mathematical techniques, and computational methods used to translate theoretical social learning concepts into executable simulations. The discussion begins with the rigorous discretization of Lévy processes—the mathematical foundation for modeling stochastic rewards and signals—and proceeds to cover the specific implementation challenges encountered in strategic experimentation scenarios. Another key innovation is our construction of observation-based reward functions that preserve expected reward structures when agents cannot directly observe the true environmental state, allowing them to learn optimal policies from noisy signals while maintaining the incentive properties of the original models. Throughout this chapter, we emphasize how our implementation preserves the strategic incentives inherent in the original models while adapting them to a computational framework suitable for reinforcement learning applications.
+
+\section{Lévy Process Discretization}
+\label{appendix:levy_discretization}
+
+This appendix provides a comprehensive mathematical treatment of the discretization of Lévy processes for implementing strategic experimentation models within our Partially Observable Active Markov Game framework. We establish rigorous theoretical foundations for the numerical approximation schemes used in our implementation and analyze their convergence properties and preservation of strategic incentives.
+
+\subsection{Mathematical Foundations of Lévy Processes}
+\label{appendix:levy_foundations}
+
+Lévy processes form a fundamental class of stochastic processes that include Brownian motion and Poisson processes as special cases. They are characterized by stationary and independent increments, serving as the natural continuous-time generalization of random walks.
+
+\begin{definition}[Lévy Process]
+    A stochastic process $X = \{X_t : t \geq 0\}$ on $\mathbb{R}^d$ with $X_0 = 0$ almost surely is a Lévy process if:
+    \begin{enumerate}
+        \item It has independent increments: for any $0 \leq t_1 < t_2 < \cdots < t_n < \infty$, the random variables $X_{t_2} - X_{t_1}, X_{t_3} - X_{t_2}, \ldots, X_{t_n} - X_{t_{n-1}}$ are mutually independent.
+        \item It has stationary increments: for any $s < t$, the distribution of $X_t - X_s$ depends only on $t-s$.
+        \item It is stochastically continuous: for any $t \geq 0$ and $\varepsilon > 0$, $\lim_{h \to 0} \mathbb{P}(|X_{t+h} - X_t| > \varepsilon) = 0$.
+    \end{enumerate}
+\end{definition}
+
+The celebrated Lévy-Khintchine formula provides a complete characterization of Lévy processes through their characteristic functions:
+
+\begin{theorem}[Lévy-Khintchine Formula \cite{sato1999levy, applebaum2009levy}]
+    If $X = \{X_t : t \geq 0\}$ is a Lévy process, then its characteristic function has the form:
+    \begin{equation}
+        \mathbb{E}[e^{i\theta X_t}] = e^{t\psi(\theta)}
+    \end{equation}
+    where
+    \begin{equation}
+        \psi(\theta) = i\alpha\theta - \frac{1}{2}\sigma^2\theta^2 + \int_{\mathbb{R}\setminus\{0\}} (e^{i\theta x} - 1 - i\theta x\mathbf{1}_{|x|<1})\nu(dx)
+    \end{equation}
+    for some $\alpha \in \mathbb{R}$, $\sigma \geq 0$, and a measure $\nu$ on $\mathbb{R}\setminus\{0\}$ satisfying $\int_{\mathbb{R}\setminus\{0\}} \min(1, x^2)\nu(dx) < \infty$.
+\end{theorem}
+
+The triplet $(\alpha, \sigma^2, \nu)$ is called the Lévy-Khintchine triplet or the characteristics of the Lévy process. Here, $\alpha$ represents a drift term, $\sigma^2$ parametrizes the continuous Gaussian component, and $\nu$ is the Lévy measure characterizing the jump behavior.
+
+\begin{theorem}[Lévy-Itô Decomposition \cite{sato1999levy, protter2005stochastic}]
+    Any Lévy process $X_t$ can be decomposed as:
+    \begin{equation}
+        X_t = \alpha t + \sigma W_t + \int_{|x|<1} x (\tilde{Y}(t, dx) - t\nu(dx)) + \int_{|x|\geq 1} x Y(t, dx)
+    \end{equation}
+    where $W_t$ is a standard Brownian motion, $Y(t, A)$ counts the number of jumps of size in set $A$ occurring up to time $t$, and $\tilde{Y}(t, dx) = Y(t, dx) - t\nu(dx)$ is the compensated Poisson random measure.
+\end{theorem}
+
+The Lévy-Itô decomposition provides a pathwise representation of a Lévy process as the sum of a drift term, a Brownian motion, and potentially infinitely many jumps, both small and large.
+
+\subsection{Time Discretization of Lévy Processes}
+\label{appendix:levy_discretization_methods}
+
+To implement continuous-time Lévy processes within discrete computational frameworks, we must employ appropriate numerical approximation schemes. For our strategic experimentation model, we adopt the Euler-Maruyama scheme, extended to accommodate the jump components of general Lévy processes.
+
+\begin{definition}[Euler-Maruyama Scheme for Lévy Processes]
+    Given a Lévy process $X_t$ with characteristics $(\alpha, \sigma^2, \nu)$ and a discretization time step $\Delta t$, the Euler-Maruyama approximation constructs a discrete-time process $\{X_{t_n}\}_{n=0}^N$ where $t_n = n\Delta t$ through the recursive relation:
+    \begin{equation}
+        X_{t_{n+1}} = X_{t_n} + \alpha \Delta t + \sigma\sqrt{\Delta t}Z_n + \Delta J_n
+    \end{equation}
+    where $Z_n \sim \mathcal{N}(0,1)$ are independent standard normal random variables and $\Delta J_n$ represents the jump increment over $[t_n, t_{n+1}]$.
+\end{definition}
+\iffalse
+    For practical implementation, the jump component $\Delta J_n$ requires careful consideration, especially when the Lévy measure potentially assigns infinite mass to small jumps.
+
+    \begin{proposition}[Approximation of Jump Component \cite{platen2010numerical, applebaum2009levy}]
+        The jump component $\Delta J_n$ can be approximated through one of the following approaches:
+        \begin{enumerate}
+            \item For finite-activity processes (where $\nu(\mathbb{R}) < \infty$):
+                  \begin{equation}
+                      \Delta J_n = \sum_{i=1}^{K_n} J_i
+                  \end{equation}
+                  where $K_n \sim \text{Poisson}(\nu(\mathbb{R})\Delta t)$ and $J_i$ are i.i.d. random variables with distribution $\frac{\nu(dx)}{\nu(\mathbb{R})}$.
+
+            \item For infinite-activity processes, a truncation approach:
+                  \begin{equation}
+                      \Delta J_n = \sum_{i=1}^{K^{\varepsilon}_n} J^{\varepsilon}_i + c_{\varepsilon}\Delta t
+                  \end{equation}
+                  where $K^{\varepsilon}_n \sim \text{Poisson}(\nu(\{x: |x| > \varepsilon\})\Delta t)$, $J^{\varepsilon}_i$ are i.i.d. with distribution $\frac{\nu(dx)\mathbf{1}_{|x|>\varepsilon}}{\nu(\{x: |x| > \varepsilon\})}$, and $c_{\varepsilon} = \int_{|x|\leq\varepsilon} x\nu(dx)$.
+        \end{enumerate}
+    \end{proposition}
+\fi
+\begin{theorem}[Convergence of Euler-Maruyama Scheme \citep{higham2005numerical, platen2010numerical}]
+    \label{thm:euler_maruyama_convergence}
+    Let $X_t$ be a Lévy process and $\hat{X}_t$ be its Euler-Maruyama approximation with time step $\Delta t$. Then for any fixed $T > 0$:
+    \begin{enumerate}
+        \item (Weak Convergence) For any smooth function $f$ with polynomial growth:
+              \begin{equation}
+                  |\mathbb{E}[f(X_T)] - \mathbb{E}[f(\hat{X}_T)]| \leq C\Delta t
+              \end{equation}
+
+        \item (Strong Convergence) If $\int_{|x|>1} |x|^2 \nu(dx) < \infty$, then:
+              \begin{equation}
+                  \mathbb{E}[\sup_{0\leq t\leq T} |X_t - \hat{X}_t|^2] \leq C\Delta t
+              \end{equation}
+    \end{enumerate}
+    where $C$ is a constant depending on $T$ and the characteristics of the Lévy process.
+
+\end{theorem}
+
+The weak and strong convergence properties ensure that our numerical scheme accurately approximates both the distributional properties and pathwise behavior of the continuous-time process as the time step decreases.
+
+\subsection{Implementing Strategic Experimentation Models}
+\label{appendix:strategic_experimentation_implementation}
+
+In our implementation of the strategic experimentation model from \citet{keller2020undiscounted}, we must discretize both the background signal process $B_t$ and the individual payoff processes $X^i_t$, while preserving the strategic incentives that drive experimentation decisions.
+
+\subsubsection{Discretization of Diffusion-Poisson Processes}
+\label{appendix:discretization_diffusion_poisson}
+
+In the original model, both $B_t$ and $X^i_t$ follow Lévy processes that combine continuous diffusion and discrete jumps:
+
+\begin{align}
+    dB_t   & = \beta_s dt + \sigma_B dW^B_t + dY^B_t \\
+    dX^i_t & = \alpha_s dt + \sigma dW^i_t + dY^i_t
+\end{align}
+
+where $W^B_t$ and $W^i_t$ are standard Brownian motions, and $Y^B_t$ and $Y^i_t$ are compound Poisson processes. Using the Euler-Maruyama scheme \citep{platen2010numerical}, we discretize these continuous-time stochastic differential equations:
+
+\begin{align}
+    B_{t+\Delta t} - B_t     & = \beta_s \Delta t + \sigma_B (W^B_{t+\Delta t} - W^B_t) + (Y^B_{t+\Delta t} - Y^B_t) \\
+    X^i_{t+\Delta t} - X^i_t & = \alpha_s \Delta t + \sigma (W^i_{t+\Delta t} - W^i_t) + (Y^i_{t+\Delta t} - Y^i_t)
+\end{align}
+
+For implementation, we denote these increments as:
+
+\begin{align}
+    B_{t-1:t}   & = \beta_s \Delta t + \sigma_B (W^B_t - W^B_{t-1}) + \Delta Y^B_t \\
+    X^i_{t-1:t} & = \alpha_s \Delta t + \sigma (W^i_t - W^i_{t-1}) + \Delta Y^i_t
+\end{align}
+
+where $(W^B_t - W^B_{t-1}) \sim \mathcal{N}(0, \Delta t)$, $(W^i_t - W^i_{t-1}) \sim \mathcal{N}(0, \Delta t)$, and $\Delta Y^B_t$, $\Delta Y^i_t$ are the increments of the compound Poisson processes over the interval $[t-1, t]$.
+
+\subsubsection{Reward Function Equivalence}
+\label{appendix:reward_equivalence}
+
+A critical challenge in our implementation is reconciling the time-dependent nature of continuous-time rewards with the time-independent reward structure required by the POAMG framework. In the original continuous-time model, agents' instantaneous rewards are:
+
+\begin{equation}
+    dR^i_t = (1-a^i_t)r_\textit{safe} dt + a^i_t dX^i_t
+\end{equation}
+
+where $a^i_t \in [0,1]$ is the allocation to the risky arm and $r_\textit{safe}$ is the safe arm's deterministic flow payoff and the Levy process increment is a function of the state $s$. To translate this structure into the POAMG framework, we need a reward function $R^i(s, a^i)$ that depends only on the state and action, not explicitly on time. We achieve this through a normalization approach:
+
+\begin{equation}
+    R^i(s, a^i) = (1-a^i)r_\textit{safe} + a^i \frac{X^i_{t-1:t}}{\Delta t}
+\end{equation}
+
+This transformation preserves the incentive structure of the original model while eliminating explicit time dependence. The following proposition establishes this equivalence formally:
+
+\begin{proposition}[Reward Equivalence]
+    The expected value of the discrete-time reward function $R^i(s, a^i)$ exactly equals the expected instantaneous flow payoff in the continuous-time model. Specifically:
+    \begin{equation}
+        \mathbb{E}[R^i(s, a^i)] = (1-a^i)r_\textit{safe} + a^i(\alpha_s + \lambda_s h_s)
+    \end{equation}
+    where $\alpha_s$ is the drift of the Levy process, $\lambda_s$ is the jump intensity and $h_s$ is the mean jump size of the compound Poisson process component of $X^i_t$ in state $s$.
+\end{proposition}
+
+\begin{proof}
+    The expected value of the discrete-time reward function is:
+    \begin{align}
+        \mathbb{E}[R^i(s, a^i)] & = (1-a^i)r_\textit{safe} + a^i\mathbb{E}\left[\frac{X^i_{t-1:t}}{\Delta t}\right]                                       \\
+                                & = (1-a^i)r_\textit{safe} + a^i\frac{\mathbb{E}[\alpha_s \Delta t + \sigma(W^i_t - W^i_{t-1}) + \Delta Y^i_t]}{\Delta t} \\
+                                & = (1-a^i)r_\textit{safe} + a^i\left(\alpha_s + \frac{\mathbb{E}[\Delta Y^i_t]}{\Delta t}\right)
+    \end{align}
+
+    Since $\mathbb{E}[W^i_t - W^i_{t-1}] = 0$ and $\mathbb{E}[\Delta Y^i_t] = \lambda_s h_s\Delta t$, where $\lambda_s$ is the jump intensity and $h_s$ is the mean jump size, we have:
+
+    \begin{align}
+        \mathbb{E}[R^i(s, a^i)] & = (1-a^i)r_\textit{safe} + a^i\left(\alpha_s + \frac{\lambda_s h_s\Delta t}{\Delta t}\right) \\
+                                & = (1-a^i)r_\textit{safe} + a^i(\alpha_s + \lambda_s h_s)
+    \end{align}
+
+    This exactly matches the expected instantaneous flow payoff in the continuous-time model.
+\end{proof}
+
+
+\iffalse
+    \subsubsection{Preservation of Strategic Incentives}
+    \label{appendix:strategic_incentives}
+
+    Beyond matching expected rewards, we must ensure that our discretization preserves the strategic incentives that drive experimentation decisions. The key strategic consideration in the model is the trade-off between exploitation (choosing the safe arm) and exploration (choosing the risky arm to learn about its quality).
+
+    \begin{proposition}[Preservation of Strategic Incentives]
+        The discrete-time reward function $R^i(s, a^i)$ preserves the strategic incentives of the continuous-time model in the sense that the optimal policy in the discrete-time model converges to the optimal policy in the continuous-time model as $\Delta t \to 0$.
+
+    \end{proposition}
+
+    \begin{proof}
+        In the strategic experimentation model, the incentive to experiment at a given belief $b$ about the state is characterized by:
+        \begin{equation}
+            I(b) = \frac{f(b) - s}{s - m(b)}
+        \end{equation}
+        when $m(b) < s$, and $I(b) = \infty$ otherwise, where $f(b)$ is the expected flow payoff of the risky arm and $m(b)$ is the expected flow payoff when the risky arm is bad. In our discrete-time approximation, the corresponding incentive is:
+        \begin{equation}
+            \hat{I}(b) = \frac{\hat{f}(b) - s}{s - \hat{m}(b)}
+        \end{equation}
+        where $\hat{f}(b)$ and $\hat{m}(b)$ are the discrete-time analogs.
+
+        Let us elaborate on why $\hat{f}(b) \to f(b)$ and $\hat{m}(b) \to m(b)$ as $\Delta t \to 0$. In the continuous-time model, the expected flow payoff of the risky arm at belief $b$ is:
+        \begin{equation}
+            f(b) = b f_1 + (1-b) f_0
+        \end{equation}
+        where $f_1 = \alpha_1 + \lambda_1\mu_1$ is the expected flow in the good state and $f_0 = \alpha_0 + \lambda_0\mu_0$ is the expected flow in the bad state, with $m(b) = f_0$. In our discrete-time approximation, we have:
+        \begin{equation}
+            \hat{f}(b) = b \hat{f}_1 + (1-b) \hat{f}_0
+        \end{equation}
+        where $\hat{f}_1$ and $\hat{f}_0$ are the expected rewards in the good and bad states, respectively.
+        From our reward equivalence result, we know that:
+        \begin{align}
+            \hat{f}_1 & = \mathbb{E}\left[\frac{X^i_{t-1:t}}{\Delta t} \mid \text{good state}\right] = \alpha_1 + \frac{\mathbb{E}[\sigma(W^i_t - W^i_{t-1}) + \Delta N^i_t \mid \text{good state}]}{\Delta t} \\
+                      & = \alpha_1 + \frac{\lambda_1\mu_1\Delta t}{\Delta t} + \frac{\mathbb{E}[\sigma(W^i_t - W^i_{t-1})]}{\Delta t}
+        \end{align}
+
+        The Brownian motion term has $\mathbb{E}[\sigma(W^i_t - W^i_{t-1})] = 0$ and $\text{Var}[\sigma(W^i_t - W^i_{t-1})] = \sigma^2 \Delta t$. By the martingale property of Brownian motion, this term contributes zero to the expected value but introduces variance of order $O(\Delta t)$. Thus:
+        \begin{equation}
+            \hat{f}_1 = \alpha_1 + \lambda_1\mu_1 + O(\Delta t) \to f_1 \text{ as } \Delta t \to 0
+        \end{equation}
+
+        Similarly, $\hat{f}_0 = \alpha_0 + \lambda_0\mu_0 + O(\Delta t) \to f_0 \text{ as } \Delta t \to 0$, and consequently $\hat{m}(b) = \hat{f}_0 \to m(b) = f_0$.
+        Therefore, we can establish that:
+        \begin{equation}
+            \hat{I}(b) = \frac{\hat{f}(b) - s}{s - \hat{m}(b)} = \frac{b \hat{f}_1 + (1-b) \hat{f}_0 - s}{s - \hat{f}_0} = \frac{b(\hat{f}_1 - \hat{f}_0) + \hat{f}_0 - s}{s - \hat{f}_0}
+        \end{equation}
+
+        As $\Delta t \to 0$, we have $\hat{f}_1 \to f_1$, $\hat{f}_0 \to f_0$, and consequently:
+        \begin{equation}
+            \hat{I}(b) \to \frac{b(f_1 - f_0) + f_0 - s}{s - f_0} = \frac{b f_1 + (1-b) f_0 - s}{s - f_0} = \frac{f(b) - s}{s - m(b)} = I(b)
+        \end{equation}
+
+        The convergence of incentives directly implies convergence of optimal policies. In the continuous-time model, the symmetric Markov perfect equilibrium characterized in \citet{keller2020undiscounted} has the form:
+        \begin{equation}
+            \kappa^*(b) =
+            \begin{cases}
+                0                    & \text{if } I(b) \leq k_0,            \\
+                \frac{I(b)-k_0}{N-1} & \text{if } k_0 < I(b) < k_0 + N - 1, \\
+                1                    & \text{if } I(b) \geq k_0 + N - 1.
+            \end{cases}
+        \end{equation}
+        where $k_0$ is a threshold determined by the model parameters and $N$ is the number of players. The discrete-time counterpart $\hat{\kappa}^*(b)$ takes the same form but with $\hat{I}(b)$ in place of $I(b)$.
+
+        Therefore, as $\Delta t \to 0$, the strategic incentives and optimal policies in our discrete-time approximation converge to those of the original continuous-time model.
+    \end{proof}
+
+\fi
+\subsection{Relation to Policy-Invariant Reward Transformations}
+\label{appendix:policy_invariance}
+
+Our approach to time-independent reward formulation can be viewed through the lens of policy-invariant reward transformations, as developed in the reinforcement learning literature by \citet{ng1999policy}.
+
+\begin{definition}[Potential-Based Reward Shaping]
+    A reward transformation $\tilde{R}(s, a, s') = R(s, a, s') + F(s, s')$ is potential-based if there exists a potential function $\Phi: S \to \mathbb{R}$ such that $F(s, s') = \gamma\Phi(s') - \Phi(s)$ for all $s, s' \in S$, where $\gamma$ is a discount factor.
+\end{definition}
+
+\begin{theorem}[Ng-Harada-Russell \citep{ng1999policy}]
+    If a reward transformation is potential-based, then the optimal policy under the transformed reward function is also optimal under the original reward function, and vice versa.
+\end{theorem}
+
+While our transformation does not directly fit the potential-based formulation (since we're normalizing by $\Delta t$ rather than adding a potential difference), it shares the crucial property of preserving optimal policies. The following result establishes this connection:
+
+\begin{proposition}[Connection to Policy-Invariant Transformations]
+    The transformation from time-dependent rewards in the continuous-time model to time-independent rewards in the POAMG framework preserves policy optimality in the limit as $\Delta t \to 0$.
+\end{proposition}
+
+\begin{proof}
+    The original cumulative reward over a time interval $[0, T]$ is:
+    \begin{equation}
+        \int_0^T [(1-a^i_t)s + a^i_t\alpha_s] dt + \int_0^T a^i_t \sigma dW^i_t + \int_0^T a^i_t dC^i_t
+    \end{equation}
+
+    The discretized cumulative reward is:
+    \begin{equation}
+        \sum_{k=0}^{\eta-1} \Delta t \left[(1-a^i_{t_k})s + a^i_{t_k}\frac{X^i_{t_k:t_{k+1}}}{\Delta t}\right] = \sum_{k=0}^{\eta-1} [(1-a^i_{t_k})s\Delta t + a^i_{t_k}X^i_{t_k:t_{k+1}}]
+    \end{equation}
+    where $\eta = T/\Delta t$ and $t_k = k\Delta t$.
+
+    As $\Delta t \to 0$ and $\eta \to \infty$ with $\eta t = T$ fixed, the discretized sum converges to the continuous-time integral. Since both formulations yield the same expected cumulative reward in the limit, they induce the same optimal policies.
+\end{proof}
+
+
+\section{Observed Reward Function}
+\label{appendix:observed_reward_derivation} In our reinforcement learning
+implementation, agents need to learn from observed rewards that reflect the optimality
+of their actions with respect to the true state of the world. However, since agents
+do not directly observe the true state $\omega$, we need to construct a reward
+function based on their observations $o$ that preserves the expected reward
+structure. This appendix provides a detailed derivation of the observation-based
+reward function.The true reward function is given by $u(s, a): S \times A \rightarrow
+    \mathbb{R}$, where $a$ is an action and $s$ is the state. However, agents only
+observe signals $o \sim \mu^{s}$ drawn from a distribution determined by the
+state. We need to construct an observation-based reward function $v(o, a): \Omega
+    _{i} \times A \rightarrow \mathbb{R}$ that satisfies:
+\begin{equation}
+    \mathbb{E}_{o \sim \mu^{s}}[v(o, a)] = u(s, a), \quad \forall s \in S, \forall
+    a \in A.
+\end{equation}
+
+In other words, the expected value of the observation-based reward $v(o, a)$
+over all possible observations $o$ given the state $s$ should equal the true
+reward $u(s, a)$ for any state-action pair. Let's define $\bm{\mu}$ as a $m \times
+    m$ matrix representing the observation distributions, where $m = |S|$ and assume
+the aforementioned state and observation spaces. Each entry $\mu^{s}(o)$ denotes
+the probability of observing observation $o$ in state $s$:
+\begin{equation}
+    \bm{\mu}=
+    \begin{bmatrix}
+        \mu^{s^1}(s^{1}) & \mu^{s^1}(s^{2}) & \cdots & \mu^{s^1}(s^{m}) \\
+        \mu^{s^2}(s^{1}) & \mu^{s^2}(s^{2}) & \cdots & \mu^{s^2}(s^{m}) \\
+        \vdots           & \vdots           & \ddots & \vdots           \\
+        \mu^{s^m}(s^{1}) & \mu^{s^m}(s^{2}) & \cdots & \mu^{s^m}(s^{m})
+    \end{bmatrix}
+\end{equation}
+
+We assume that observation distributions are linearly independent across states,
+which implies that $\bm{\mu}$ is invertible. This assumption is satisfied when $\mu
+    ^{s}(s) > \mu^{s}(s')$ for all $s \neq s' \in S$, meaning that each state is
+more likely to generate its corresponding observation than any other observation.
+For each action $a \in A$, we define a utility vector
+$\bm{u}_{a} \in \mathbb{R}^{k}$ as:
+\begin{equation}
+    \bm{u}_{a} =
+    \begin{bmatrix}
+        u(s^{1}, a) \\
+        u(s^{2}, a) \\
+        \vdots      \\
+        u(s^{m}, a)
+    \end{bmatrix}
+\end{equation}
+
+Similarly, we define a vector of observation-based rewards $\bm{v}_{a} \in \mathbb{R}
+    ^{k}$ for action $a$:
+\begin{equation}
+    \bm{v}_{a} =
+    \begin{bmatrix}
+        v(s^{1}, a) \\
+        v(s^{2}, a) \\
+        \vdots      \\
+        v(s^{m}, a)
+    \end{bmatrix}
+\end{equation}
+
+The condition that expected observation-based rewards match true rewards can be written
+as a linear system:
+\begin{equation}
+    \bm{\mu}^{T} \bm{v}_{a} = \bm{u}_{a}
+\end{equation}
+
+where $\bm{\mu}^{T}$ is the transpose of $\bm{\mu}$. The solution to this system
+is:
+\begin{equation}
+    \bm{v}_{a} = (\bm{\mu}^{T})^{-1}\bm{u}_{a} = (\bm{\mu}^{-1})^{T} \bm{u}_{a}
+\end{equation}
+
+This gives us the vector of observation-based rewards that satisfy our expected
+reward condition. For each observation $o_{j}$ and action $a$, the observation-based
+reward is:
+\begin{equation}
+    v(o_{j}, a) = \sum_{l=1}^{m} \left( \bm{\mu}^{-1}\right)_{jl}u(s_{l}, a)
+\end{equation}
+
+where $\left( \bm{\mu}^{-1}\right)_{jl}$ denotes the $(j, l)$-th element of
+$\bm{\mu}^{-1}$.
+\paragraph{Binary Case Example}
+For the special case with two states of the world ($m = 2$) and symmetric
+observations with accuracy $q > 0.5$, the observation distribution matrix is:
+\begin{equation}
+    \bm{\mu}=
+    \begin{bmatrix}
+        q   & 1-q \\
+        1-q & q
+    \end{bmatrix}
+\end{equation}
+
+This means that in state $s^{1}$, the probability of observing $s^{1}$ is $q$
+and the probability of observing $s^{2}$ is $1-q$, and vice versa for state $s^{2}$.
+The inverse of this matrix is:
+\begin{equation}
+    \bm{\mu}^{-1}= \frac{1}{2q-1}
+    \begin{bmatrix}
+        q      & -(1-q) \\
+        -(1-q) & q
+    \end{bmatrix}
+\end{equation}
+
+In our implementation, we set the true reward as the indicator function for taking
+the correct action, which for the binary case becomes, $u(s^{1}, a^{1}) = u(s^{2}
+    , a^{2}) = 1$; $u(s^{2}, a^{1}) = u(s^{1}, a^{2}) = 0$. For action $a^{1}$, the
+utility vector is $\bm{u}_{a^1}= [1, 0]^{T}$, and the observation-based reward vector
+is:
+\begin{equation}
+    \bm{v}_{a^1}= \bm{\mu}^{-1}\bm{u}_{a^1}= \frac{1}{2q-1}
+    \begin{bmatrix}
+        q \\
+        -(1-q)
+    \end{bmatrix}
+\end{equation}
+
+This means that when an agent takes action $a^{1}$ and observes signal $s^{1}$,
+the reward is $v(s^{1}, a^{1}) = \frac{q}{2q-1}$, and when the agent observes signal
+$s^{2}$, the reward is $v(s^{2}, a^{1}) = -\frac{1-q}{2q-1}$. Similarly, for
+action $a^{2}$, the utility vector is $\bm{u}_{a^2}= [0, 1]^{T}$, and the
+observation-based reward vector is:
+\begin{equation}
+    \bm{v}_{a^2}= \bm{\mu}^{-1}\bm{u}_{a^2}= \frac{1}{2q-1}
+    \begin{bmatrix}
+        -(1-q) \\
+        q
+    \end{bmatrix}
+\end{equation}
+
+Combining these results, we can express the observation-based reward function for
+any action-observation pair $(a, o)$ as:
+\begin{equation}
+    v(a, o) = \frac{q \cdot \mathbf{1}_{\{a = \varphi(o)\}}- (1-q) \cdot
+        \mathbf{1}_{\{a \neq \varphi(o)\}}}{2q-1}
+\end{equation}
+
+where $\varphi$ maps observations to their corresponding actions. The derived
+observation-based reward function has an intuitive interpretation. When an agent
+takes an action matching its observation ($a = o$), it receives a positive
+reward of $\frac{q}{2q-1}$, whereas when she takes an action not matching its observation
+($a \neq o$), it receives a negative reward of $-\frac{1-q}{2q-1}$. As $q$ approaches
+0.5 (signals become uninformative), the rewards grow in magnitude, reflecting the
+increased uncertainty. Conversely, as $q$ approaches 1 (signals become perfectly
+informative), the reward for matching observation and action approaches 1, and the
+penalty for mismatching approaches 0, meaning that the observed reward function
+converges to the true reward function. This reward structure incentivizes agents
+to match their actions to their observations when signals are reliable, but also
+allows them to learn to override their immediate observations when the actions
+of other agents provide stronger evidence about the true state through beliefs.
+

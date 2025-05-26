@@ -1,0 +1,174 @@
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with extended width -->
+  <rect x="0" y="0" width="900" height="500" fill="#fafafa"/>
+  <text x="450" y="40" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">Temporal Evolution of States, Beliefs, and Policies</text>
+  
+  <!-- Timeline -->
+  <line x1="200" y1="450" x2="800" y2="450" stroke="#333" stroke-width="2"/>
+  <text x="200" y="470" font-family="Arial" font-size="14" text-anchor="middle">t</text>
+  <text x="400" y="470" font-family="Arial" font-size="14" text-anchor="middle">t+1</text>
+  <text x="600" y="470" font-family="Arial" font-size="14" text-anchor="middle">t+2</text>
+  <text x="800" y="470" font-family="Arial" font-size="14" text-anchor="middle">t+3</text>
+  
+  <!-- Timeline markers -->
+  <line x1="200" y1="445" x2="200" y2="455" stroke="#333" stroke-width="2"/>
+  <line x1="400" y1="445" x2="400" y2="455" stroke="#333" stroke-width="2"/>
+  <line x1="600" y1="445" x2="600" y2="455" stroke="#333" stroke-width="2"/>
+  <line x1="800" y1="445" x2="800" y2="455" stroke="#333" stroke-width="2"/>
+  
+  <!-- Category Labels - moved way to the left -->
+  <text x="80" y="100" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">States</text>
+  <text x="80" y="170" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">Observations</text>
+  <text x="80" y="240" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">Beliefs</text>
+  <text x="80" y="320" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">Policy</text>
+  <text x="80" y="340" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">Parameters</text>
+  <text x="80" y="380" font-family="Arial" font-size="16" font-weight="bold" text-anchor="start">Actions</text>
+  
+  <!-- States - moved right -->
+  <g id="states">
+    <ellipse cx="200" cy="100" rx="30" ry="20" fill="#ffe0d0" stroke="#ff8040" stroke-width="2"/>
+    <text x="200" y="105" font-family="Arial" font-size="14" text-anchor="middle">s_t</text>
+    
+    <ellipse cx="400" cy="100" rx="30" ry="20" fill="#ffe0d0" stroke="#ff8040" stroke-width="2"/>
+    <text x="400" y="105" font-family="Arial" font-size="14" text-anchor="middle">s_{t+1}</text>
+    
+    <ellipse cx="600" cy="100" rx="30" ry="20" fill="#ffe0d0" stroke="#ff8040" stroke-width="2"/>
+    <text x="600" y="105" font-family="Arial" font-size="14" text-anchor="middle">s_{t+2}</text>
+    
+    <ellipse cx="800" cy="100" rx="30" ry="20" fill="#ffe0d0" stroke="#ff8040" stroke-width="2"/>
+    <text x="800" y="105" font-family="Arial" font-size="14" text-anchor="middle">s_{t+3}</text>
+    
+    <!-- State transitions -->
+    <path d="M230 100 L370 100" stroke="#ff8040" stroke-width="1.5" fill="none" marker-end="url(#arrowOrange)"/>
+    <path d="M430 100 L570 100" stroke="#ff8040" stroke-width="1.5" fill="none" marker-end="url(#arrowOrange)"/>
+    <path d="M630 100 L770 100" stroke="#ff8040" stroke-width="1.5" fill="none" marker-end="url(#arrowOrange)"/>
+  </g>
+  
+  <!-- Observations - moved right -->
+  <g id="observations">
+    <ellipse cx="200" cy="170" rx="30" ry="20" fill="#e0e0ff" stroke="#4040ff" stroke-width="2"/>
+    <text x="200" y="175" font-family="Arial" font-size="14" text-anchor="middle">o_t</text>
+    
+    <ellipse cx="400" cy="170" rx="30" ry="20" fill="#e0e0ff" stroke="#4040ff" stroke-width="2"/>
+    <text x="400" y="175" font-family="Arial" font-size="14" text-anchor="middle">o_{t+1}</text>
+    
+    <ellipse cx="600" cy="170" rx="30" ry="20" fill="#e0e0ff" stroke="#4040ff" stroke-width="2"/>
+    <text x="600" y="175" font-family="Arial" font-size="14" text-anchor="middle">o_{t+2}</text>
+    
+    <ellipse cx="800" cy="170" rx="30" ry="20" fill="#e0e0ff" stroke="#4040ff" stroke-width="2"/>
+    <text x="800" y="175" font-family="Arial" font-size="14" text-anchor="middle">o_{t+3}</text>
+    
+    <!-- Emission connections -->
+    <path d="M200 120 L200 150" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M400 120 L400 150" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M600 120 L600 150" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M800 120 L800 150" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+  </g>
+  
+  <!-- Beliefs - moved right -->
+  <g id="beliefs">
+    <ellipse cx="200" cy="240" rx="40" ry="25" fill="#fff0d0" stroke="#ffc040" stroke-width="2"/>
+    <text x="200" y="235" font-family="Arial" font-size="14" text-anchor="middle">b_t</text>
+    <text x="200" y="250" font-family="Arial" font-size="10" text-anchor="middle">(Distribution)</text>
+    
+    <ellipse cx="400" cy="240" rx="40" ry="25" fill="#fff0d0" stroke="#ffc040" stroke-width="2"/>
+    <text x="400" y="235" font-family="Arial" font-size="14" text-anchor="middle">b_{t+1}</text>
+    <text x="400" y="250" font-family="Arial" font-size="10" text-anchor="middle">(Distribution)</text>
+    
+    <ellipse cx="600" cy="240" rx="40" ry="25" fill="#fff0d0" stroke="#ffc040" stroke-width="2"/>
+    <text x="600" y="235" font-family="Arial" font-size="14" text-anchor="middle">b_{t+2}</text>
+    <text x="600" y="250" font-family="Arial" font-size="10" text-anchor="middle">(Distribution)</text>
+    
+    <ellipse cx="800" cy="240" rx="40" ry="25" fill="#fff0d0" stroke="#ffc040" stroke-width="2"/>
+    <text x="800" y="235" font-family="Arial" font-size="14" text-anchor="middle">b_{t+3}</text>
+    <text x="800" y="250" font-family="Arial" font-size="10" text-anchor="middle">(Distribution)</text>
+    
+    <!-- Belief updates -->
+    <path d="M240 240 L360 240" stroke="#ffc040" stroke-width="1.5" fill="none" marker-end="url(#arrowYellow)"/>
+    <path d="M440 240 L560 240" stroke="#ffc040" stroke-width="1.5" fill="none" marker-end="url(#arrowYellow)"/>
+    <path d="M640 240 L760 240" stroke="#ffc040" stroke-width="1.5" fill="none" marker-end="url(#arrowYellow)"/>
+    
+    <!-- Observation to belief connections -->
+    <path d="M200 190 L200 215" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M400 190 L400 215" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M600 190 L600 215" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M800 190 L800 215" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  </g>
+  
+  <!-- Policy Parameters - moved right -->
+  <g id="policy-params">
+    <rect x="170" y="300" width="60" height="40" rx="5" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+    <text x="200" y="325" font-family="Arial" font-size="14" text-anchor="middle">θ_t</text>
+    
+    <rect x="370" y="300" width="60" height="40" rx="5" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+    <text x="400" y="325" font-family="Arial" font-size="14" text-anchor="middle">θ_{t+1}</text>
+    
+    <rect x="570" y="300" width="60" height="40" rx="5" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+    <text x="600" y="325" font-family="Arial" font-size="14" text-anchor="middle">θ_{t+2}</text>
+    
+    <rect x="770" y="300" width="60" height="40" rx="5" fill="#f0d0ff" stroke="#c040ff" stroke-width="2"/>
+    <text x="800" y="325" font-family="Arial" font-size="14" text-anchor="middle">θ_{t+3}</text>
+    
+    <!-- Policy updates -->
+    <path d="M230 320 L370 320" stroke="#c040ff" stroke-width="1.5" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M430 320 L570 320" stroke="#c040ff" stroke-width="1.5" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M630 320 L770 320" stroke="#c040ff" stroke-width="1.5" fill="none" marker-end="url(#arrowPurple)"/>
+  </g>
+  
+  <!-- Actions - moved right -->
+  <g id="actions">
+    <ellipse cx="200" cy="380" rx="30" ry="20" fill="#d0fff0" stroke="#40ffc0" stroke-width="2"/>
+    <text x="200" y="385" font-family="Arial" font-size="14" text-anchor="middle">a_t</text>
+    
+    <ellipse cx="400" cy="380" rx="30" ry="20" fill="#d0fff0" stroke="#40ffc0" stroke-width="2"/>
+    <text x="400" y="385" font-family="Arial" font-size="14" text-anchor="middle">a_{t+1}</text>
+    
+    <ellipse cx="600" cy="380" rx="30" ry="20" fill="#d0fff0" stroke="#40ffc0" stroke-width="2"/>
+    <text x="600" y="385" font-family="Arial" font-size="14" text-anchor="middle">a_{t+2}</text>
+    
+    <ellipse cx="800" cy="380" rx="30" ry="20" fill="#d0fff0" stroke="#40ffc0" stroke-width="2"/>
+    <text x="800" y="385" font-family="Arial" font-size="14" text-anchor="middle">a_{t+3}</text>
+    
+    <!-- Policy to action connections -->
+    <path d="M200 340 L200 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M400 340 L400 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M600 340 L600 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M800 340 L800 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    
+    <!-- Belief to action connections - made to curve wide around labels -->
+    <path d="M160 240 C130 250 130 370 170 380" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M360 240 C330 250 330 370 370 380" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M560 240 C530 250 530 370 570 380" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    <path d="M760 240 C730 250 730 370 770 380" stroke="#333" stroke-width="1" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+    
+    <!-- Action to state connections -->
+    <path d="M230 380 C280 380 300 140 370 100" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M430 380 C480 380 500 140 570 100" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M630 380 C680 380 700 140 770 100" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    
+    <!-- Action to policy update connections -->
+    <path d="M230 380 C270 380 330 340 370 320" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M430 380 C470 380 530 340 570 320" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M630 380 C670 380 730 340 770 320" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  </g>
+  
+  <!-- Markers -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff8040"/>
+    </marker>
+    <marker id="arrowYellow" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffc040"/>
+    </marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" 
+      markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c040ff"/>
+    </marker>
+  </defs>
+</svg>

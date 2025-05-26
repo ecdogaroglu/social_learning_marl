@@ -1,0 +1,154 @@
+This section reviews key literature across economic social learning and multi-agent reinforcement learning (MARL), highlighting how our approach bridges these fields to address their respective limitations.
+
+\section{Social Learning}
+The economic study of social learning originated with \citet{banerjee1992simple} and \citet{bikhchandani1992theory}, who formalized how rational agents might ignore private information to follow predecessors' actions, leading to information cascades and potentially inefficient herding. While foundational, these models rely on one-shot sequential decisions rather than the repeated interactions that characterize many real-world learning contexts. \citet{smith2000pathological} extended this work by showing how heterogeneous preferences can lead to confounded learning, where private signals remain relevant despite observing others' actions.
+
+Social learning in network settings expands this framework by examining how network structure influences information flow \citep{acemoglu2011bayesian, golub2010naive}. Two principal approaches have emerged: Bayesian models where agents perform rational inference \citep{rosenberg2009informational, gale2003bayesian,mossel2015strategic}, and non-Bayesian models \citep{golub2010naive, demarzo2003persuasion} like the DeGroot framework \citep{degroot1974reaching} where agents update beliefs through weighted averaging of neighbors' opinions. A critical insight from this literature is that network topology significantly affects learning outcomes. However, most network models still fall short in capturing how agents strategically adapt to others' evolving learning behaviors over time—a key element of our framework. subsectionWhile early models focused on one-shot decisions, more recent work has explored repeated interactions where agents continuously adapt strategies based on observations. These settings more closely align with our MARL approach and will be the focus of our implementation.
+
+\subsection{Strategic Experimentation}
+
+The strategic experimentation literature examines settings where agents balance exploiting current knowledge against generating new information through exploration \citep{bolton1999strategic, keller2005strategic}. This creates a dynamic tension between individual incentives to free-ride on others' information production and collective benefits from experimentation. Strategic experimentation represents a fundamental departure from classical social learning models by explicitly accounting for the intertemporal nature of information acquisition. Unlike cascade models where agents make one-shot decisions in sequence, agents in strategic experimentation scenarios face repeated opportunities to learn and adapt their strategies over time. This dynamic perspective connects directly to the reinforcement learning paradigm, where exploration-exploitation tradeoffs are central \citep{sutton2018reinforcement}. These tradeoffs create the necessary tension for social influence, even in the absence of informational asymmetry among agents that is often central to social learning models \citep{gale2003bayesian}.
+
+The economic foundations of strategic experimentation were established by \citet{rothschild1974two}, who analyzed how a monopolist might experiment with different prices to learn about demand. This concept was extended to multi-agent settings by \citet{bolton1999strategic}, who developed a framework for analyzing experimentation in teams. Their seminal work revealed that when information is a public good, free-riding incentives can significantly reduce aggregate experimentation below socially optimal levels, creating a classic collective action problem.
+
+Several extensions have explored how different information structures affect experimentation incentives. \citet{keller2005strategic} introduced exponential bandits, where lump-sum rewards arrive according to a Poisson process, demonstrating how the resolution of uncertainty affects the dynamics of experimentation. Their model showed that "encouragement effects" can arise, where agents experiment more intensively to motivate others to join the exploration effort. \citet{klein2011negatively} demonstrated how negatively correlated bandits—where success on one experiment decreases the estimated value of others—can encourage more efficient experimentation patterns. 
+\iffalse
+\citet{bonatti2017dynamic} further showed how competition in experimentation can sometimes overcome free-riding tendencies and increase information production through strategic preemption.\fi
+
+\citet{keller2020undiscounted} developed a particularly relevant model using average reward criteria rather than discounted objectives. Under this framework, the value of information doesn't decay over time, incentivizing different patterns of exploration. This approach aligns with our POAMG framework's emphasis on long-term strategic adaptation in multi-agent systems. \citet{heidhues2015strategic} further demonstrated how private observations can restore experimentation incentives that fail under public observations, providing insights into how information asymmetry affects collective learning dynamics.
+
+The strategic teaching phenomenon, where agents take seemingly suboptimal actions to influence others' beliefs, emerges naturally in these contexts. \citet{yamamoto2019stochastic} demonstrated how sophisticated agents might deliberately punish or reward others via continuation payoffs due to invariance property of the payoff sets. Similarly, \citet{halac2017designing} showed how optimal incentive structures might intentionally incentivize agents to experiment, highlighting the importance of mechanism design in collective learning environments.
+
+
+The literature on information design \citep{kamenica2011bayesian, bergemann2019information} provides complementary insights by examining how information revelation mechanisms affect experimentation decisions. \citet{che2018optimal} showed how over-revealing information can sometimes incentivize more experimentation than full transparency. These insights connect directly to the strategic influence aspects of our POAMG framework, which explicitly models how agents reason about and deliberately influence others' learning trajectories.
+
+\subsubsection{Formal Model}
+More formally, we can describe the strategic experimentation literature through the model developed by \citet{keller2020undiscounted}. In this framework, $n$ agents face a two-armed bandit problem where they continuously allocate resources between a safe arm with known deterministic payoff $r_\textit{safe} > 0$ and a risky arm whose expected payoff depends on an unknown state $\omega \in \{0,1,\ldots,m\}$ with $m \geq 1$. The state is drawn at the beginning according to a publicly known prior distribution with full support. The risky arm generates payoffs according to a Lévy process:
+\begin{equation*}
+    X^i_t = \alpha_{\omega} t + \sigma Z^i_t + Y^i_t
+\end{equation*}
+where $Z^i$ is a standard Wiener process, $Y^i$ is a compound Poisson process with Lévy measure $\nu_{\omega}$, and $\alpha_{\omega}$ is the drift rate in state $\omega$. The expected payoff per unit of time is $r_{\omega} = \alpha_{\omega} + \lambda_{\omega} h_{\omega}$, where $\lambda_{\omega}$ is the expected number of jumps per unit of time and $h_{\omega}$ is the expected jump size.
+
+At each moment, agent $i$ allocates fraction $a^i_{t} \in [0,1]$ to the risky arm, yielding instantaneous expected payoff:
+\begin{equation*}
+    (1-a^i_{t})r_\textit{safe} + a^i_{t}r_{\omega}
+\end{equation*}
+
+Each agent observes their own payoff process, the payoff processes of all other agents, and potentially a background information process $B_t$, which provides free information about the state. This background process follows the same structure as the payoff processes:
+\begin{equation*}
+    B_t = \beta_{\omega} t + \sigma_B Z^B_t + Y^B_t
+\end{equation*}
+whose informativeness is given exogenously as $k_0$ which increases linearly in time. Under the strong long-run average criterion, agents maximize:
+\begin{equation}
+    \lim_{T \to \infty} \mathbb{E}\left[\frac{1}{T}\int_0^{T}\{(1-a^i_{t})r_\textit{safe} + a^i_{t}r_{\omega}\}dt\right]
+\end{equation}
+
+The unique symmetric Markov perfect equilibrium strategy is characterized as:
+
+\begin{equation}
+    a^*(b) = 
+    \begin{cases}
+    0 & \text{if } I(b) \leq k_0, \\
+    \frac{I(b)-k_0}{n-1} & \text{if } k_0 < I(b) < k_0 + n - 1, \\
+    1 & \text{if } I(b) \geq k_0 + n - 1.
+    \end{cases}
+    \end{equation}
+
+where $I(b)$ corresponds to the incentive to experiment, defined as:
+\begin{equation*}
+    I(b) = \frac{f(b) - r_\textit{safe}}{r_\textit{safe} - m(b)}
+\end{equation*}
+when $m(b) < s$, and $I(b) = \infty$ otherwise, where $f(b)$ is the expected flow payoff under full information and $m(b)$ is the expected flow payoff from the risky arm.
+
+This formulation directly captures the tension between exploitation (choosing the currently optimal action) and exploration (generating information for future decisions), as well as the free-rider problem that arises when information is a public good. While strategic experimentation models capture important elements of learning dynamics, they typically assume perfectly rational agents and often rely on standardized information structures.
+
+\subsection{Learning Without Experimentation}
+
+A complementary strand of research examines settings where agents learn without directly observing rewards. \citet{huang2024learning} studied how long-lived agents learn in networks through repeated interactions, revealing a fundamental inefficiency: regardless of network size, learning speed remains bounded by a constant dependent only on private signal distributions. \citet{brandl2024} extended these results by showing that this limitation doesn't apply uniformly to all agents, constructing scenarios where some agents learn faster at others' expense.
+
+Unlike strategic experimentation models where agents receive direct payoff feedback, learning without experimentation captures scenarios where agents must form beliefs based primarily on others' observed actions. This distinction is crucial for modeling many real-world social learning contexts, from financial markets \citep{avery1998multidimensional} to technology adoption \citep{ellison1993rules}, where payoffs are delayed, noisy, or unobservable.
+
+The theoretical foundations for this approach draw from both Bayesian and non-Bayesian learning traditions. \citet{gale2003bayesian} and \citet{smith2000pathological} developed early models showing how rational agents might become trapped in information cascades when learning from others' actions. \citet{acemoglu2011bayesian} extended this analysis to network settings, demonstrating how network topology influences the aggregation of dispersed information.
+
+A substantial literature has explored learning rates in networked environments. \cite{bala1998learning} show neighborhood structure influences optimal action adoption, while \cite{golub2012homophily} demonstrate that homophily slows consensus convergence without being affected by network density. \cite{Harel2014TheSO} quantify information loss when observing others' discrete actions, finding only a fraction of private information transmits, approaching zero in large societies due to "groupthink." \cite{Jadbabaie2013InformationHA} characterize learning rates through agents' signal structures and eigenvector centralities, showing optimal information allocation depends on its distribution—better information should be placed at central nodes when information structures are comparable, but at peripheral nodes when agents possess unique critical information.
+
+The mechanisms behind these learning barriers stem from information loss in the action quantization process. When continuous beliefs are compressed into discrete actions, information is inherently lost \citep{smith2000pathological}. \citet{guarino2013social} characterized this as 'coarse inference' where agents make inferences based only on the aggregate distribution of actions across states rather than on the fine details of how actions depend on specific histories, leading to a loss of information.
+
+\iffalse
+Recent work has examined how behavioral factors and network structure interact to shape learning outcomes. \citet{molavi2018theory} developed models of "rational inattention" where agents optimally allocate limited cognitive resources to process social information. \citet{dasaratha2020learning} showed how certain network structures can amplify or mitigate the effects of confirmation bias and other cognitive distortions. \citet{jadbabaie2012non} proposed hybrid learning models that combine Bayesian updating with naive opinion averaging, better matching empirical patterns of social influence.
+\fi
+
+Strategic considerations emerge naturally in these settings as agents realize their actions influence the future learning of others. \citet{bhattacharya2013strategic} demonstrated how forward-looking agents might distort their actions to manipulate the information revealed to others. \citet{ARIELI2019185} showed how agents with private information might strategically time their actions to maximize influence on others' beliefs. These strategic dynamics align closely with the active influence mechanisms in our POAMG framework.
+
+\subsubsection{Formal Model}
+Similar to before, we characterize the learning dynamics in settings without experimentation through the model introduced by \citet{brandl2024}. In this framework, a set of $N= \{1, \ldots, n\}$ agents interact over discrete time periods $t \in \{1, 2, \ldots\}$ in a fixed social network. The state of the world $\omega$ is drawn from a finite set $S$ according to a prior distribution with full support and remains fixed throughout.
+
+At each period $t$, each agent $i$ receives a private signal $o^i_t$ from a set $O$, drawn according to a state-dependent public known distribution. Signals are independent across agents and time periods. Each agent then chooses an action $a^i_t$ from a set $A$, observing the actions taken by neighbors $N^i \subset N$ in previous periods.
+
+All agents share the same utility function $u: S \times A \rightarrow \mathbb{R}$, which depends on the state and their own action. For each state $s$, there is a unique optimal action $a_{s} = \arg\max_{a \in A} u(s, a)$, and no action is optimal in two different states. Crucially, agents do not observe their realized utilities, eliminating experimentation motives. Agent $i$'s information set at period $\tau$ consists of:
+\begin{equation*}
+    I^i_{\leq \tau} = (o^i_1, \ldots, o^i_{\tau}; (a^j_t)_{j \in N^i, t < \tau})
+\end{equation*}
+
+A (pure) strategy for agent $i$ is a function $\sigma^i$ that maps information sets to actions:
+\begin{equation*}
+    \sigma^i: \cup_{t=1}^{\infty} (O^t \times A^{N^i \times (t-1)}) \rightarrow A
+\end{equation*}
+
+For any given strategy profile $\boldsymbol{\sigma} = (\sigma^1, \ldots, \sigma^n)$, the learning rate of agent $i$ is defined as:
+\begin{equation*}
+    r^i(\boldsymbol{\sigma}) = \lim\inf_{t\rightarrow\infty} -\frac{1}{t}\log \mathbb{P}(a^i_t \neq a_{\omega} | \boldsymbol{\sigma})
+\end{equation*}
+
+The main theoretical results establish both limitations and opportunities in social learning networks. First, the social learning barrier theorem demonstrates that regardless of network structure or strategies, some agent's learning rate is bounded by a constant that depends only on the signal structure:
+\begin{equation*}
+    \min_{i \in n} r^i(\boldsymbol{\sigma}) \leq r_{bdd} = \min_{\theta \neq \theta'} \left\{D_{KL}(\mu_{\theta} || \mu_{\theta'}) + D_{KL}(\mu_{\theta'} || \mu_{\theta})\right\}
+\end{equation*}
+where $D_{KL}(\mu_{\theta} || \mu_{\theta'})$ is the Kullback-Leibler divergence between signal distributions and the summation corresponds to the Jeffreys divergence \citet{52862b84-7c34-3186-8b28-6af4806272c3}. This bound applies regardless of the network size or structure. Second, the coordination benefit theorem establishes that for large enough networks and for any $\epsilon > 0$, all agents can learn at rates above a certain bound:
+\begin{equation*}
+    \min_{i \in n} r^i(\boldsymbol{\sigma}) \geq r_{crd} - \epsilon
+\end{equation*}
+where $r_{crd} = \min_{\theta \neq \theta'} D_{KL}(\mu_{\theta} || \mu_{\theta'})$ is strictly greater than the autarky learning rate that an agent can achieve alone. This theoretical framework illuminates a fundamental challenge in social learning: information aggregation can fail due to information cascades and herding dynamics, resulting in, as pointed out by the paper, what \citet{harel2021rational} termed "rational groupthink"—where feedback loops cause agents to persist in incorrect beliefs despite continual information arrival. While this model allows agents to learn from various observation structures, it does not impose full rationality on the agents, a strand of literature that we discuss next.
+
+\subsection{Non-Bayesian Learning}
+
+While most economic models assume fully rational agents, partial rationality perspectives acknowledge cognitive limitations that affect learning. Models like \citet{jadbabaie2012non}'s hybrid learning rule (combining Bayesian updating with naive averaging) and level-$k$ reasoning \citep{stahl1994experimental, crawford2007level} provide middle grounds between full rationality and simple heuristics.
+\iffalse
+Research on information processing constraints, such as bounded memory \citep{monte2014bounded} and rational inattention \citep{sims2003implications}, further illustrates how cognitive limitations shape learning outcomes. Behavioral biases like confirmation bias \citep{rabin1999psychology}, correlation neglect \citep{enke2019correlation}, and naive herding \citep{eyster2010naive} additionally affect how agents process social information. These behavioral factors often exacerbate herding behavior and information cascades, creating a gap between theoretical predictions based on full rationality and observed behavior. Our MARL framework provides a computational approach to modeling partial rationality that captures these behavioral patterns while maintaining analytical tractability.
+\fi
+
+Evolutionary Game Theory (EGT) also provides a powerful non-Bayesian framework for modeling multi-agent learning dynamics without assuming full rationality. Instead, EGT examines how strategy distributions evolve through selection processes based on relative performance \citep{weibull1997evolutionary}. This perspective aligns naturally with reinforcement learning's trial-and-error approach. \citet{tuyls2004evolutionary} demostrates several important connections between EGT and MARL among which, they relate multi-agent Q-learning to replicator dynamics. This mathematical equivalence provides theoretical insights into MARL convergence and equilibrium properties, helping explain empirical observations in complex social dilemmas \citep{leibo2017multi}.
+
+Bridging theoretical frameworks and computational implementations, MARL offers a powerful methodology for operationalizing social learning models. MARL provides computational tools that can simulate the intricate dynamics of social learning environments while implementing the strategic adaptations that economic theories recognize as essential but frequently find difficult to compute in complex, realistic scenarios.
+
+\section{Multi-Agent Reinforcement Learning}
+
+While economic models offer valuable theoretical insights, they often struggle with computational tractability when modeling repeated strategic interactions with partially rational agents. This is where MARL provides complementary tools that address specific limitations of economic approaches. MARL frameworks enable the simulation of complex multi-agent systems where agents learn optimal policies through trial-and-error interactions with their environment and other agents. Unlike traditional economic models that often require closed-form solutions, MARL can handle high-dimensional state spaces, complex agent interactions, and non-stationary dynamics that emerge when multiple agents learn simultaneously.
+
+The core components of MARL include state representations, action spaces, reward functions, and learning algorithms that enable agents to maximize expected cumulative rewards. These components can be tailored to model various aspects of social learning, including partial observability (through belief states), strategic adaptation (through policy gradient methods), and partial rationality (through constrained optimization). Modern MARL approaches incorporate techniques such as centralized training with decentralized execution, value decomposition, and multi-agent actor-critic methods to address coordination challenges that arise in multi-agent settings. We direct the interested reader to Appendix \ref{appendix:rl_details} for a detailed introduction of reinforcement learning techniques, including formal definitions, algorithms, and theoretical properties.
+
+Economic models typically assume either fully rational agents (in Bayesian frameworks) or overly simplistic learning rules (in behavioral models). MARL offers a middle ground by modeling agents that learn from experience and adapt over time without requiring full rationality. \citet{ndousse2021emergent} demonstrated that even without explicit programming, reinforcement learning agents can develop sophisticated social learning capabilities that mirror human behavior. This addresses the partial rationality problem by providing computational mechanisms for flexible belief updating based on partial information, learning complex strategies through trial and error, and adapting to non-stationary environments created by other learning agents.
+
+A key limitation of economic social learning models is their difficulty in capturing how agents strategically adapt to others' learning processes. The strategic experimentation literature acknowledges these dynamics but often lacks tractable solutions outside of simplified settings. \citet{jaques2019social} addressed this by introducing Social Influence as a mechanism in MARL, where agents receive additional reward for causally influencing others' actions. This creates a computational framework for modeling strategic teaching and information revelation—key dynamics in the economic models of \citet{bolton1999strategic} and \citet{heidhues2015strategic}.
+
+More directly relevant to our approach, \citet{kim2022influencing} developed Active Markov Games, which explicitly model how agents reason about and influence the policy evolution of other agents. This formalism allows us to capture the strategic adaptation that economic models identify as important but struggle to compute in complex environments.
+
+Despite these advantages, standard MARL approaches have their own limitations when applied to social learning. Most MARL algorithms assume full observability of state information, while social learning inherently involves partial observability of others' private information and beliefs. Many MARL approaches treat non-stationarity as a technical obstacle rather than a strategic feature to be exploited. Additionally, MARL often lacks the theoretical foundations that economic models provide for understanding equilibrium behavior.
+
+Our POAMG framework extends Active Markov Games to partially observable settings specifically to address these limitations. By incorporating policy evolution as an integral part of the environment dynamics while accounting for partial observability, we provide a computational approach that preserves the strategic sophistication of economic models.
+
+\section{Bridging Economic Theory and MARL}
+
+While economic social learning and MARL have developed largely in parallel, their complementary strengths suggest significant potential for integration. Economic models provide rigorous theoretical foundations for understanding rational behavior, belief formation, and information aggregation in social contexts. However, these models often face computational limitations when addressing complex strategic interactions, especially when agents have heterogeneous beliefs, partial rationality, or operate in environments with partial observability. 
+
+Conversely, MARL offers computational frameworks for modeling adaptive agents in complex, high-dimensional environments. These approaches excel at simulating emergent behaviors and can operate effectively without imposing full rationality assumptions. However, MARL approaches frequently lack the theoretical grounding to interpret equilibrium properties and sometimes overlook the strategic sophistication captured in economic models.
+
+Our research bridges these fields by developing a partially observable active Markov game (POAMG) framework that preserves the strategic considerations central to economic theory while leveraging the computational scalability of MARL. This integration addresses three key challenges:
+
+First, we explicitly incorporate policy evolution dynamics and strategic adaptation as fundamental features rather than technical obstacles. Unlike standard MARL approaches that treat non-stationarity as a problem to overcome, our framework models how sophisticated agents reason about and deliberately influence others' learning trajectories \citep{kim2022influencing}, similar to the strategic teaching phenomena identified in economic experimentation literature \citep{yamamoto2019stochastic}.
+
+Second, we incorporate partial observability as an intrinsic characteristic of social learning environments. By modeling belief states and observation functions, our approach captures the information asymmetries and strategic uncertainty that economic models identify as crucial determinants of learning outcomes \citep{heidhues2015strategic, rosenberg2009informational}.
+
+Third, we account for long-horizon strategic planning where agents optimize not just immediate rewards but also their influence on the future learning dynamics of other agents. This aligns with economic perspectives on forward-looking behavior while remaining computationally tractable through reinforcement learning techniques.
+
+The resulting framework enables more realistic modeling of social learning phenomena that resist analysis under either purely economic or purely computational approaches. It combines economic insights on strategic sophistication with MARL's ability to simulate complex adaptive systems, yielding both theoretical insights and practical algorithms for understanding multi-agent learning in partially observable environments.

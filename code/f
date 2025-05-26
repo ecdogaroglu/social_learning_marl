@@ -1,0 +1,56 @@
+// FURTHER+ Algorithm
+digraph {
+	node [fillcolor=lightgrey shape=box style=filled]
+	rankdir=TB
+	env [label="Environment (s_t)"]
+	obs_fn [label="Observation Function (O_i)"]
+	obs [label="Observations (o_t^i)"]
+	agent [label="Agent i"]
+	trans_fn [label="Transition Function (T)"]
+	next_state [label="Next State (s_{t+1})"]
+	reward_fn [label="Reward Function (R_i)"]
+	rewards [label="Rewards (r_t^i)"]
+	joint_action [label="Joint Action (a_t)"]
+	belief [label="Belief State Processing (GRU)"]
+	belief_out [label="Updated Belief (b_t^i)"]
+	inference [label="Inference Learning Module"]
+	encoder [label="Encoder Network
+(predicts z_{t+1}^{-i})"]
+	decoder [label="Decoder Network
+(predicts a_t^{-i})"]
+	latent [label="Inferred Latent States (z_t^{-i})"]
+	rl [label="Reinforcement Learning Module"]
+	policy [label="Policy Network
+(π^i(a^i | b_t^i, z_t^{-i}))"]
+	value [label="Value Networks
+(q^i(b_t^i, z_t^{-i}, a_t))"]
+	update_fn [label="Policy Update Function (U_i)"]
+	params [label="Updated Policy Parameters (θ_{t+1}^i)"]
+	convergence [label="Convergence to Stationary Distribution (μ(s, b, θ))"]
+	env -> obs_fn
+	env -> trans_fn
+	env -> reward_fn
+	obs_fn -> obs
+	obs -> agent
+	agent -> joint_action
+	joint_action -> trans_fn
+	trans_fn -> next_state
+	next_state -> env
+	reward_fn -> rewards
+	rewards -> agent
+	agent -> belief
+	belief -> belief_out
+	belief_out -> rl
+	agent -> inference
+	inference -> encoder
+	inference -> decoder
+	encoder -> latent
+	decoder -> latent
+	latent -> rl
+	agent -> rl
+	rl -> policy
+	rl -> value
+	rl -> update_fn
+	update_fn -> params
+	params -> convergence
+}
