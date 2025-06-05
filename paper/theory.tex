@@ -374,41 +374,11 @@ The entropy calculation must also account for the hyperbolic tangent transformat
 The policy objective combines expected future returns with an entropy bonus, creating a balance between exploitation and exploration. The entropy term encourages the policy to maintain stochasticity, preventing premature convergence to deterministic policies that might be suboptimal in partially observable settings. The use of the minimum value across dual Q-networks helps mitigate overestimation bias—a persistent challenge in Q-learning approaches. This is particularly important in social learning contexts where overestimated values can lead to overly optimistic strategies that fail to account for the strategic adaptations of other agents.
 
 
-\subsubsection{Advantage-Weighted Transformer Training} A key innovation in POLARIS is the use of advantage-weighted training for the belief processor:
-\begin{align}
-    J^i_{\text{transformer}}(\psi^i_{\text{Transformer}}) &= \mathbb{E}_{D^i}\left[A^i(b^i, a^i) \cdot \text{BCE}(\mathbb{P}(s|b^i), o^i_{t+1})\right]
-\end{align}
-
-where $A^i(b^i, a^i)$ is the advantage function and BCE is binary cross-entropy loss. This objective bridges belief formation and policy optimization in a novel way. By weighting the belief update loss with the advantage function, the Transformer is encouraged to generate belief states that not only accurately predict future observations but also lead to high-value actions. In traditional partially observable reinforcement learning, belief updates are typically performed independently of policy optimization. By contrast, POLARIS creates a direct pathway for policy performance to influence belief formation, prioritizing informative aspects of the state space that have the greatest impact on decision quality. This approach is particularly valuable in social learning contexts, where certain beliefs about others' strategies may be more consequential than others for effective coordination or competition.
-
-\subsubsection{Catastrophic Forgetting Prevention}
-
-In social learning environments, the underlying state of the world often remains fixed during an episode, but varies across episodes. This creates a continual learning challenge: agents must adapt to new states while retaining knowledge about previously encountered states. Without proper mechanisms, neural networks tend to overwrite previously learned representations when adapting to new conditions—a phenomenon known as catastrophic forgetting \citep{vandeven2024continuallearningcatastrophicforgetting}. POLARIS addresses this challenge through Elastic Weight Consolidation (EWC), which selectively preserves important parameters for previously encountered states while allowing flexibility for adaptation. EWC augments the standard training objective with a regularization term that penalizes significant changes to parameters critical for performance in previously encountered states:
-
-\begin{align}
-    L_{\text{EWC}}(\theta) = L(\theta) + \sum_i \frac{\lambda}{2} F^i (\theta^i - {\theta^i}^*)^2
-\end{align}
-
-where $\theta^*$ represents parameters that performed well on previous tasks, $F^i$ is the Fisher information matrix that measures parameter importance, and $\lambda$ controls the strength of regularization. The Fisher information matrix provides a principled way to identify which parameters are most crucial for previously learned tasks, calculated using gradients of the log-likelihood of the model's output with respect to the parameters on data from previously encountered states.
-
-Crucially, POLARIS introduces a dynamic mechanism that automatically adjusts the EWC importance factor based on observed performance:
-
-\begin{align}
-    \lambda_t = 
-    \begin{cases}
-        \lambda_{t-1} \cdot 0.8 & \text{if loss ratio} > 1.5 \text{ (loss increasing too much)} \\
-        \lambda_{t-1} \cdot 1.2 & \text{if loss ratio} < 0.5 \text{ (loss decreasing too quickly)} \\
-        \lambda_{t-1} & \text{otherwise}
-    \end{cases}
-\end{align}
-
-This adaptive approach monitors the ratio between current and previous loss values, reducing the EWC importance when the loss is increasing too rapidly (indicating difficulty learning new information due to excessive preservation of old parameters) and increasing it when the loss is decreasing too quickly (suggesting potential forgetting of valuable past knowledge). The implementation also includes both L1 and L2 penalties with adaptive weighting between them, transitioning from more L2 regularization for early tasks to more L1 regularization for later tasks, encouraging sparser updates as the model accumulates more knowledge from different states.
-
 \subsection{Training Process}
 
 The overall training process interleaves updates to the three modules, ensuring that improvements in one component can benefit the others within each training iteration. Algorithm 1 outlines the complete POLARIS training procedure for a single agent.
 
-\begin{algorithm}[H]
+\begin{algorithm}[!htbp]
 \caption{POLARIS Training Algorithm for Single Agent}
 \begin{algorithmic}[1]
 \State Initialize belief processor, inference module, policy and value networks with parameters $\psi^i_{\text{Transformer}}$, $\phi^i$, $\theta^i$, $\psi^i_{\beta}$
@@ -444,11 +414,11 @@ The overall training process interleaves updates to the three modules, ensuring 
 \end{algorithmic}
 \end{algorithm}
 
-The algorithm follows a sequential process where each agent first updates its belief state based on new observations and the joint actions of all agents using the Transformer-based belief processor (line 6). Based on this updated belief and the current inference of other agents' latent states, the agent selects an action using its stochastic policy—sampling from a categorical distribution for discrete action spaces (line 9) or using the reparameterization trick for continuous action spaces (lines 11-13). After executing this action and observing the reward and next observation (line 15), the agent updates its inference of other agents' latent states using the GNN-based inference module (line 16). All of these experiences are stored in a replay buffer for later training (line 17).
+The algorithm follows a sequential process where each agent first updates its belief state based on new observations and the joint actions of all agents using the Transformer-based belief processor. Based on this updated belief and the current inference of other agents' latent states, the agent selects an action using its stochastic policy—sampling from a categorical distribution for discrete action spaces or using the reparameterization trick for continuous action spaces. After executing this action and observing the reward and next observation, the agent updates its inference of other agents' latent states using the GNN-based inference module. All of these experiences are stored in a replay buffer for later training.
 
-At designated update steps, the agent samples a batch of transitions from its replay buffer and uses these to update all network components. The inference module is updated first (line 19) to improve predictions of other agents' actions using the ELBO objective. Next, the value networks are updated (line 20) to better estimate expected returns. The policy network is then updated (line 21) to maximize expected value and entropy. Finally, the belief processor is updated (line 22) using the advantage-weighted training approach. Target networks, used for stable learning in the SAC framework, are updated using a weighted average of the current and target parameters (line 23).
+At designated update steps, the agent samples a batch of transitions from its replay buffer and uses these to update all network components. The inference module is updated first to improve predictions of other agents' actions using the ELBO objective. Next, the value networks are updated to better estimate expected returns. The policy network is then updated to maximize expected value and entropy. Finally, the belief processor is updated using the advantage-weighted training approach. Target networks, used for stable learning in the SAC framework, are updated using a weighted average of the current and target parameters.
 
-A crucial feature of POLARIS is its adaptive response to changes in the environment state. When the true state changes (line 24), the algorithm calculates Fisher information matrices from the current replay buffer (line 25) and registers a new task with the EWC mechanism (line 26), preserving important knowledge from the previous state while allowing adaptation to the new state.
+A crucial feature of POLARIS is its adaptive response to changes in the environment state. When the true state changes, the algorithm calculates Fisher information matrices from the current replay buffer and registers a new task with the EWC mechanism, preserving important knowledge from the previous state while allowing adaptation to the new state.
 
 In the next chapter, we demonstrate the practical application of our POAMG framework and the POLARIS algorithm to canonical social learning scenarios from economic theory. The versatility of our approach is particularly evident in its ability to seamlessly handle both continuous and discrete action spaces, as well as varying types of return objectives. This capability proves essential when implementing strategic experimentation models with continuous allocation decisions and average reward objectives, and learning without experimentation models with discrete signaling actions and discounted reward objectives. Through these implementations, we validate theoretical predictions from economic models while uncovering new insights about strategic adaptation in partially observable multi-agent systems that would be difficult to obtain through purely analytical approaches. The experimental results not only demonstrate the effectiveness of our theoretical framework but also highlight how computational methods can complement and extend traditional economic analysis of social learning phenomena.
 

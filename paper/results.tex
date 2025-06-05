@@ -1,12 +1,60 @@
 Building on the theoretical framework of Partially Observable Active Markov Games developed in the previous section, we now apply our POLARIS algorithm to concrete social learning scenarios. This implementation demonstrates how our approach bridges theoretical economic models with computational reinforcement learning methods, allowing us to validate theoretical predictions while uncovering new insights about strategic adaptation in partial observability settings.
 
-We implement our Partially Observable Active Markov Game framework to model the two canonical social learning scenarios discussed in the background section: strategic experimentation with observable rewards and learning without experimentation through action observation. By reformulating these economic models as POAMGs, we demonstrate how our framework can capture the sophisticated learning dynamics present in these scenarios while enabling the discovery of complex strategies through our POLARIS algorithm. \footnote{Complete Python implementation is available at \url{https://github.com/ecdogaroglu/POLARIS}.}
+We implement our Partially Observable Active Markov Game framework to model the two canonical social learning scenarios discussed in the background section: strategic experimentation with observable rewards and learning without experimentation through action observation. By reformulating these economic models as POAMGs, we demonstrate how our framework can capture the sophisticated learning dynamics present in these scenarios while enabling the discovery of complex strategies through our POLARIS algorithm. \footnote{Complete Python implementation is available at \url{https://github.com/ecdogaroglu/polaris}.}
+
+\section{Methodological Framework and Challenges}
+
+Before presenting our experimental results, we must address two fundamental challenges that arise when applying reinforcement learning to social learning environments. These challenges stem from a fundamental mismatch between the strategic requirements of economic theory and the constraints of computational implementation, ultimately necessitating a novel experimental methodology that focuses on within-episode dynamics rather than cross-episode equilibrium convergence.
+
+\subsection{Ex Ante Strategy Optimization vs Ex Post Convergence}
+
+Implementing reinforcement learning in social learning environments reveals a fundamental tension between economic theory and computational practice. In economic social learning models, agents are expected to develop strategies that perform optimally across all possible states of the world—an ex ante perspective where the optimal strategy accounts for uncertainty about which state will be realized. Such strategies require maintaining flexibility and developing sophisticated mixed approaches that can respond appropriately whether the true state turns out to be A or B, good or bad.
+
+However, our computational implementation reveals that agents instead converge to state-specific optimal allocations—an ex post perspective where behavior is optimized for the particular state that has been realized. This distinction creates a critical incompatibility in binary social learning environments we consider here. In strategic experimentation, if the risky arm is revealed to be good, rational agents should allocate all resources to it; conversely, if it performs poorly, optimal behavior requires complete avoidance. In learning without experimentation, once the true state is A, the optimal action is unambiguously action A, while in state B, only action B is rational. These ex post strategies are not merely different from the ex ante approach—they are fundamentally incompatible policy objectives that cannot be reconciled through standard learning approaches.
+
+The computational challenge emerges because reinforcement learning agents, operating within our episodic framework, can only observe and learn from one realized state per episode. This structure forces agents away from developing the sophisticated ex ante strategies characterized in the theoretical models toward state-specific ex post optimization. Instead of learning "if state = A, do X; if state = B, do Y" as economic theory prescribes, agents learn "do X" during episodes initialized with state A, then encounter conflicting objectives to "do Y" during subsequent episodes with state B.
+
+A natural approach to analyzing multi-agent strategic behavior in these environments would be to evaluate reinforcement learning models that are trained across different belief states or environmental configurations. This methodology could theoretically enable us to examine how agents would behave under the full spectrum of possible conditions, potentially revealing the sophisticated mixed strategies and state-contingent policies that characterize optimal ex ante behavior in economic theory. To test this approach, we attempted to recover ex ante policy analysis by inverting a linear grid of possible beliefs into latent belief representations and feeding these directly into trained policy networks. The goal was to evaluate how agents would behave across the full spectrum of possible belief states, potentially revealing the sophisticated mixed strategies characteristic of economic equilibria. However, this approach consistently failed as the trained networks would invariably follow the optimal action corresponding to the last true state they were trained on, regardless of the belief input provided. This confirmed that the learned policies had become fundamentally state-specific rather than developing the belief-contingent strategies required for ex ante optimization, making model evaluation for ex ante analysis impossible due to the underlying technical constraint of catastrophic forgetting.
+
+\subsection{Catastrophic Forgetting in Fixed-State Social Learning}
+
+The ex ante versus ex post discrepancy described above manifests as a severe technical challenge when implementing reinforcement learning in these environments: catastrophic forgetting. Since the behavioral requirements for different state realizations are diametrically opposed, continuous training across episodes with different realized states inevitably leads to catastrophic forgetting. Each episode's learning systematically destroys the value functions and policies acquired in previous episodes with different state realizations, preventing the emergence of stable, discriminative strategies that could respond appropriately to environmental uncertainty as economic theory requires.
+
+To address this fundamental limitation, we explored several established catastrophic forgetting mitigation techniques \citep{vandeven2024continuallearningcatastrophicforgetting}, including Elastic Weight Consolidation \citep{kirkpatrick2017overcoming}, Synaptic Intelligence \citep{zenke2017continuallearningsynapticintelligence}, alternating state presentation schedules, and state-aware replay buffers that integrate experiences from previous environmental configurations. However, these approaches proved ineffective because they assume some degree of transferability or compatibility between learning tasks. When ex post optimal policies require completely opposite actions across states, traditional continual learning techniques cannot meaningfully "consolidate" or "protect" previous learning without fundamentally undermining current learning objectives.
+
+This constraint necessitates resetting agents at the beginning of each episode rather than allowing continuous learning across episodes, which limits our ability to directly evaluate the sophisticated equilibrium strategies described in both \citet{keller2020undiscounted} and related theoretical work. These equilibria require agents to maintain stable ex ante strategies that can discriminate between environmental conditions and respond appropriately—capabilities that prove incompatible with standard reinforcement learning when agents can only experience one state realization per episode. Consequently, our experimental methodology focuses on within-episode learning dynamics and cross-episode pattern analysis to extract meaningful insights about multi-agent strategic behavior despite these fundamental constraints.
+
+\subsection{Two-Staged Analysis Methodology}
+\label{sec:two-staged-analysis}
+
+To address the catastrophic forgetting limitation while still extracting meaningful insights about multi-agent learning patterns, we adopt a consistent two-staged analysis approach across both experimental scenarios. This methodology enables robust characterization of learning dynamics despite the fundamental constraints of applying reinforcement learning to environments with fixed but episode-varying states.
+
+\paragraph{Stage 1: Within-Episode Role Identification} For each episode $k$, we identify agents that exhibit extreme performance characteristics. In strategic experimentation, we track cumulative allocation patterns:
+\begin{equation}
+    i_{\text{high}}^k = \arg\max_i \sum_{t=1}^T a_{t,k}^i, \quad 
+    i_{\text{low}}^k = \arg\min_i \sum_{t=1}^T a_{t,k}^i
+\end{equation}
+
+In learning without experimentation, we identify the fastest and slowest learning agents by fitting learning rates:
+\begin{equation}
+    i_{\text{fast}}^k = \arg\max_i r_k^i, \quad 
+    i_{\text{slow}}^k = \arg\min_i r_k^i
+\end{equation}
+where $r_k^i$ is agent $i$'s learning rate in episode $k$.
+
+\paragraph{Stage 2: Cross-Episode Pattern Aggregation} We then aggregate the performance of identified extreme agents across episodes to examine systematic patterns:
+\begin{equation}
+    \bar{P}_t^{\text{extreme}} = \frac{1}{n_{\text{episodes}}} \sum_{k=1}^{n_{\text{episodes}}} P_{t,k}^{i_{\text{extreme}}^k}
+\end{equation}
+where $P_{t,k}^i$ represents the relevant performance metric (cumulative allocation, learning accuracy, etc.) for agent $i$ at time $t$ in episode $k$.
+
+This methodology reveals whether observed disparities represent structural features of multi-agent learning or merely artifacts of specific agent characteristics, as different agents assume extreme roles across different episodes.
 
 \section{Strategic Experimentation}
 
-We reformulate the strategic experimentation model of \citet{keller2020undiscounted} as a Partially Observable Active Markov Game. This framework analyzes undiscounted continuous-time games where a number of symmetric players act non-cooperatively, trying to learn an unknown state of the world governing the risky arm's expected payoff. The state space $S = \{0,1,\ldots,m\}$ represents possible states of the world, with a deterministic transition function since the underlying state remains constant throughout the interaction. Each agent's action space $A^i = [0,1]$ represents the fraction of resources allocated to the risky arm at each decision point, creating a continuous action space that allows for nuanced exploration strategies.
+We reformulate the strategic experimentation model of \citet{keller2020undiscounted} as a Partially Observable Active Markov Game. This framework analyzes undiscounted continuous-time games where a number of symmetric players act non-cooperatively, trying to learn an unknown state of the world governing the risky arm's expected payoff. The state space $S = \{0,1,\ldots,m\}$ represents possible states of the world, with a deterministic transition function since the underlying state remains constant throughout the interaction. Each agent's action space in the theoretical model is $A^i = [0,1]$ representing the fraction of resources allocated to the risky arm at each decision point.
 
-While the original model operates in continuous time with Lévy processes, our POAMG implementation discretizes time using the Euler-Maruyama scheme \citep{kloeden1992numerical, platen1999introduction} for both the background signal and the agents' payoff processes. This numerical method is widely used for approximating solutions to stochastic differential equations driven by both Brownian motion and Poisson processes.
+While the original model operates in continuous time with Lévy processes, our POAMG implementation discretizes time using the Euler-Maruyama scheme \citep{kloeden1992numerical, platen1999introduction} for both the background signal and the agents' payoff processes. However, to enable reinforcement learning with discrete action spaces, we implement a practical discretization where agents choose between two actions: "allocate to risky arm" (action 1) or "allocate to safe arm" (action 0). The probability of selecting action 1 serves as the continuous allocation parameter, allowing us to recover the continuous allocation behavior while maintaining compatibility with discrete policy networks.
 
 The agents receive a public signal produced by the background process, which leads to the observation function:
 
@@ -26,76 +74,62 @@ where $\Delta t$ is the discretization time step,
 $(W^i_t - W^i_{t-1}) \sim \mathcal{N}(0, \Delta t)$, and $\Delta Y^i_t$ is the increment of the compound Poisson processes over the interval $[t-1, t]$.
 This normalization converts accumulated rewards to instantaneous reward rates, preserving the incentive structure of the original model. A comprehensive mathematical treatment of this discretization approach, including convergence properties and the preservation of strategic incentives, is provided in Appendix \ref{appendix:levy_discretization}.
 
-Each agent observes the increments in the public background signal, their own payoff process (dependent on their allocation $a^i$ to the risky arm and the true state $\omega$), and the allocations together with the rewards of all other agents. The unique feature of the strategic experimentation model is the explicit form of the symmetric Markov perfect equilibrium, which depends only on three factors: the safe payoff, the expected current payoff of the risky arm, and the expected full-information payoff. To validate this theoretical result, we configure POLARIS to measure: (1) The cutoff belief at which agents switch between the safe and risky arm
-(2) The relationship between individual experimentation intensity and group experimentation intensity
-(3) Free-riding behavior as a function of the number of players
-(4) Strategy independence from the specific payoff-generating process
-\iffalse
-    For experimental validation, we implement three distinct payoff-generating processes that preserve the same reward statistics: pure Brownian motion with unknown drift, pure Poisson processes with unknown intensity, and mixed Lévy processes with both continuous and jump components. In all three cases, the theory predicts identical equilibrium strategies when expressed in terms of the incentive to experiment $I(\pi) = \frac{f(\pi)-s}{s-m(\pi)}$ when $m(\pi) < s$, and $I(\pi) = \infty$ otherwise, where $\pi$ represents the belief state.
-\fi
-To measure convergence to equilibrium behavior, we track the Kullback-Leibler divergence (KL divergence) between agents' actual strategies and the theoretically optimal strategy specified in Keller and Rady's work. The KL divergence is calculated as
+Each agent observes the increments in the public background signal, their own payoff process (dependent on their allocation $a^i$ to the risky arm and the true state $\omega$), and the allocations together with the rewards of all other agents. For continuous signals, POLARIS agents use a specialized transformer loss function that computes the expected signal distribution based on the current belief state and environment parameters, enabling principled belief updating in response to Lévy process observations.
 
-\begin{equation}
-    D_{KL}(P||Q) = \sum_{x} P(x) \log\frac{P(x)}{Q(x)},
-\end{equation}
+\subsection{Experimental Setup}
 
-where $P$ represents the agent's learned policy distribution and $Q$ represents the theoretical optimal policy distribution at each belief state:
+We implement comprehensive experiments using specialized experimental frameworks for both detailed single-configuration analysis and comparative analysis across different group sizes. Our experimental protocol examines group sizes of $n \in \{1, 2, 4, 8\}$ agents; safe payoff of $r_{\text{safe}} = 0.5$; drift rates of $[0, 1]$ for bad and good states respectively; jump rates of $[0, 0.1]$ with jump sizes of $[1.0, 1.0]$; background informativeness of $k_0 = 0.001$; and time discretization step of $\Delta t = 1.0$.
 
-\begin{equation}
-    a^*(b) =
-    \begin{cases}
-        0                    & \text{if } I(b) \leq k_0,            \\
-        \frac{I(b)-k_0}{n-1} & \text{if } k_0 < I(b) < k_0 + n - 1, \\
-        1                    & \text{if } I(b) \geq k_0 + n - 1.
-    \end{cases}
-\end{equation}
+Following our two-staged analysis methodology, the POLARIS implementation tracks: (1) Convergence of individual agent allocation strategies to state-dependent optimal actions within episodes; (2) Belief fluctuations over time to assess the impact of neighbor action observation on learning; (3) Cumulative allocation disparities between highest and lowest allocators as a function of group size; and (4) Episode-wise analysis of allocation patterns across different true states (good vs. bad).
 
-\iffalse
-    We also assess the rate of social learning by measuring the expected time until agents' posterior beliefs concentrate within an $\epsilon$-neighborhood of the true state. The background information in this model ensures exponentially fast convergence, which is empirically validated by fitting an exponential decay curve to the mean distance between current beliefs and true state across multiple simulation runs.
-\fi
-For varying group sizes $n \in \{2,4,8,16\}$, we measure the relationship between individual and group experimentation. The theory predicts that the set of beliefs for which no experimentation occurs remains unchanged as $n$ increases—a stark manifestation of free-riding behavior. Additionally, the theory predicts that in regions of partial experimentation, the intensity per agent will decrease with $n$, while the total group intensity increases. These predictions create testable patterns that our POLARIS implementation can validate.
-\iffalse
-    An important methodological insight from this implementation is the impact of the background signal $k_0$ on learning dynamics. As $k_0$ approaches zero, the equilibrium strategy converges monotonically to a well-defined limit. However, without background information, the strong long-run average criterion would yield an expectation of minus infinity, making the framework inapplicable. We thus implement a parametric analysis with diminishing values of $k_0$ to approximate the limit behavior predicted by the theory.
-\fi
+For each configuration, we run experiments with horizon lengths of 50 steps for comparative sweeps across group sizes, focusing on the emergence of allocation patterns and their relationship to theoretical predictions. Our analysis emphasizes within-episode learning dynamics rather than cross-episode equilibrium convergence due to the catastrophic forgetting constraint.
+
+\subsection{Results and Analysis}
+
+Our experimental results reveal sophisticated strategic learning dynamics while highlighting key challenges in measuring theoretical equilibrium convergence in reinforcement learning settings. We examine three primary aspects of the learning behavior that provide insights into multi-agent strategic experimentation.
 
 \begin{figure}[!htbp]
     \centering
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../code/polaris/results/strategic_experimentation_agents_2_gnn/network_complete_agents_2/good_belief_over_time.png}
-        \subcaption{Good state beliefs over time, demonstrating convergence to the true state.}
-        \label{fig:good_belief_over_time}
+        \includegraphics[width=\textwidth]{../code/polaris/docs/allocation_accuracy_over_time.png}
+        \subcaption{Allocation accuracy over time.}
+        \label{fig:allocation_accuracy_over_time}
     \end{minipage}
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../code/polaris/results/strategic_experimentation_agents_2_gnn/network_complete_agents_2/agent_allocations.png}
-        \subcaption{Agent allocations over time, demonstrating eventual adoption of the best strategy.}
-        \label{fig:agent_allocations}
+        \includegraphics[width=\textwidth]{../code/polaris/docs/belief_accuracy_over_time.png}
+        \subcaption{Belief accuracy over time.}
+        \label{fig:belief_accuracy_over_time}
     \end{minipage}
-    
-    \vspace{0.3cm}
-    
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{../code/polaris/results/strategic_experimentation_agents_2_gnn/network_complete_agents_2/kl_divergence.png}
-        \subcaption{KL divergence between agents' learned strategies and the theoretical optimal strategy as a function of time, demonstrating convergence to equilibrium behavior.}
-        \label{fig:kl_divergence}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{../code/polaris/results/strategic_experimentation/sweep_allocations/average_cumulative_allocation_per_agent_over_time.png}
-        \subcaption{Average cumulative allocation per agent over time across different network configurations, demonstrating independence from the network size.}
-        \label{fig:average_cumulative_allocation_per_agent_over_time}
-    \end{minipage}
-    
     \caption{Learning dynamics in the strategic experimentation model}
     \label{fig:strategic_experimentation_results}
 \end{figure}
 
+\paragraph{Strategic Action Convergence} POLARIS agents successfully learn to converge toward state-dependent optimal allocation strategies. In good states, agents increase their allocation to the risky arm over time, while in bad states, they learn to favor the safe alternative. This convergence demonstrates that the discretized action representation effectively captures the continuous allocation dynamics of the theoretical model, enabling agents to discover appropriate exploration-exploitation strategies through reinforcement learning.
 
-Our experimental results confirm that POLARIS agents converge to the theoretically predicted equilibrium regardless of the specific payoff-generating process employed. This validation demonstrates the framework's ability to capture the sophisticated strategic considerations of undiscounted multi-agent learning, providing computational support for the theoretical predictions of Keller and Rady. Furthermore, our results show that the mixed Lévy process case—not analytically tractable in the original paper due to its complexity—exhibits the same qualitative behavior as the pure Brownian and Poisson cases, providing evidence for the robustness of the theoretical framework.
+\paragraph{Belief Dynamics and Social Learning Effects} Figure \ref{fig:belief_accuracy_over_time} reveals fluctuating belief patterns that indicate the importance of neighbor action observation in the learning process. These fluctuations demonstrate that agents actively incorporate information from neighbors' allocation decisions, leading to more informed belief updating compared to purely individual learning. The variability in belief trajectories reflects the ongoing process of social information aggregation, where agents continuously refine their understanding based on both private signals and observed neighbor behaviors.
+
+
+\begin{figure}[!htbp]
+    \centering
+        \includegraphics[width=\textwidth]{../code/polaris/docs/highest_lowest_cumulative_allocators_good_state.png}
+        \caption{Highest and lowest cumulative allocators in the good state.}
+        \label{fig:highest_lowest_cumulative_allocators_good_state}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth]{../code/polaris/docs/highest_lowest_cumulative_allocators_bad_state.png}
+    \caption{Highest and lowest cumulative allocators in the bad state.}
+    \label{fig:highest_lowest_cumulative_allocators_bad_state}
+\end{figure}
+\paragraph{Dynamic Role Assignment and Allocation Disparities} Figures \ref{fig:highest_lowest_cumulative_allocators_good_state} and \ref{fig:highest_lowest_cumulative_allocators_bad_state} demonstrate a systematic widening of the gap between highest and lowest cumulative allocators as group size increases. This pattern reveals the emergence of dynamic role assignment in multi-agent learning, where agents naturally differentiate into information generators and information exploiters within each episode. In strategic experimentation, this manifests as some agents reducing individual experimentation when benefiting from others' information generation (free-riding effects), while enabling top experimenters to allocate more aggressively when supported by group learning (encouragement effects).
+
+Crucially, our two-staged analysis methodology reveals that these disparities emerge consistently across episodes, with different agents assuming the roles of highest and lowest allocators in different episodes. This dynamic role rotation—parallel to the information generator/exploiter roles observed in learning without experimentation—indicates that the patterns reflect structural features of multi-agent learning rather than fixed agent characteristics. The systematic nature of this role assignment across both experimental scenarios suggests a fundamental principle of social learning: agents naturally specialize into complementary roles that enhance collective information processing, whether through experimentation patterns in strategic contexts or exploration variance in pure learning settings.
+
+\paragraph{Implications and Validation} These results demonstrate that our POAMG framework captures essential features of strategic experimentation dynamics, including state-dependent learning, social information effects, and group size impacts on allocation behavior. The observed patterns of strategic adaptation, belief fluctuations, and allocation disparities provide computational validation for key theoretical insights about multi-agent experimentation and information sharing, even though direct equilibrium convergence measurement is precluded by the catastrophic forgetting constraint discussed in our methodological framework.
 
 \section{Learning Without Experimentation}
 
@@ -114,47 +148,20 @@ where $q > 1/m$ is the signal accuracy. Since agents don't observe real rewards 
     R^i(s_t, a^i_t) = v(o^i_t, a^i_t) = \frac{q \cdot \mathbb{I}_{\{a^i_t = \varphi(o^i_t)\}} - (1 - q) \cdot \mathbb{I}_{\{a^i_t \neq \varphi(o^i_t)\}}}{2q - 1}
 \end{equation*}
 
-where $\varphi$ maps states to their corresponding correct actions. \footnote{Formally, the mapping $\varphi: S \rightarrow A$ is a bijective function defined as $\varphi(s^j) = a^j$ for all $j \in \{1,2,...,m\}$, associating each state with the action having the same index.} This construction ensures the expected reward matches the true utility function in expectation: \footnote{See \ref{appendix:observed_reward_derivation} for a detailed derivation and the formulation for a generic dimension $m$.}
+where $\varphi$ maps states to their corresponding correct actions.\footnote{Formally, the mapping $\varphi: S \rightarrow A$ is a bijective function defined as $\varphi(s^j) = a^j$ for all $j \in \{1,2,...,m\}$, associating each state with the action having the same index.} This construction ensures the expected reward matches the true utility function in expectation: \footnote{See \ref{appendix:observed_reward_derivation} for a detailed derivation and the formulation for a generic dimension $m$.}
 
 \begin{equation*}
     \mathbb{E}_{o \sim \mu^{s}}[v(o, a)] = u(s, a) = \mathbb{I}_{\{a = \varphi(s)\}}.
 \end{equation*}
 
 
-This construction ensures agents are rewarded based on their posterior belief given the private signal, maintaining compatibility with the original model's incentive structure while providing a learning signal for POLARIS.
+In this setup, agents are rewarded based on their posterior belief given the private signal, maintaining compatibility with the original model's incentive structure while providing a learning signal for POLARIS.
 
 \subsection{Experimental Setup}
 
-We implement comprehensive experiments to validate these theoretical predictions and explore the learning dynamics under various network structures. Our experimental protocol examines network sizes of $n \in \{1, 2, 4, 8\}$ agents; network topologies including complete, ring, star, and random networks; signal accuracy of $p = 0.75$ (matching the paper's example where $r_{\text{aut}} = 0.14$, $r_{\text{crd}} = 0.55$, and $r_{\text{bdd}} = 1.10$); and learning metrics consisting of empirical learning rates extracted via log-linear regression.
+We implement comprehensive experiments to validate these theoretical predictions and explore the learning dynamics under various network structures. Our experimental protocol examines network sizes of $n \in \{1, 2, 4, 8\}$ agents; network topologies including complete, ring, star, and random networks; signal accuracy of $p = 0.75$ (we use the same signal accuracy as in the paper's example where $r_{\text{aut}} \approx 0.14$, $r_{\text{crd}} \approx 0.55$, and $r_{\text{bdd}} \approx 1.10$); and learning metrics consisting of empirical learning rates extracted via log-linear regression.
 
-For each configuration, we run multiple independent episodes with randomly initialized true states and agents. Our analysis follows a two-stage approach. First, for each episode $k$, we track each agent's incorrect action probability over time: 
-\begin{equation}
-    \hat{P}_{t,k}^i = 1 - \pi_t^i(a_{\omega_k} | b^i_t, z^i_t)
-\end{equation}
-
-And estimate individual learning rates by fitting: 
-\begin{equation}
-    \log \hat{P}_{t,k}^i \approx -r_k^i t + c_k^i
-\end{equation}
-
-To identify the fastest and slowest learners for that episode: 
-\begin{equation}
-    i_{\text{fast}}^k = \arg\max_i r_k^i
-\end{equation} 
- \begin{equation}
-    i_{\text{slow}}^k = \arg\min_i r_k^i
-\end{equation}
-
-Second, we aggregate the performance of fastest and slowest learners across episodes:
-
-\begin{equation}
-    \bar{P}_t^{\text{fast}} = \frac{1}{N_{\text{episodes}}} \sum_{k=1}^{N_{\text{episodes}}} \hat{P}_{t,k}^{i_{\text{fast}}^k}
-\end{equation}
-\begin{equation}
-    \bar{P}_t^{\text{slow}} = \frac{1}{N_{\text{episodes}}} \sum_{k=1}^{N_{\text{episodes}}} \hat{P}_{t,k}^{i_{\text{slow}}^k}
-\end{equation}
-
-where $N_{\text{episodes}}$ is the number of episodes. This methodology allows us to examine the distribution of learning rates that emerge from the same network structure across different realizations, revealing whether the theoretical bounds hold regardless of which specific agent becomes the fastest or slowest learner in any given episode.
+Following our two-staged analysis methodology described in Section \ref{sec:two-staged-analysis}, we track each agent's incorrect action probability over time and estimate individual learning rates by fitting log-linear regressions to identify the fastest and slowest learners within each episode. We then aggregate the performance of these extreme learners across episodes to examine whether the observed learning disparities represent structural features of multi-agent learning rather than artifacts of specific agent characteristics.
 
 \subsection{Results and Analysis}
 
@@ -164,50 +171,52 @@ Our experimental results provide strong validation of the theoretical prediction
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{../code/polaris/results/brandl_experiment/agent_performance/fastest_slowest_network_sizes_evolution.png}
+    \includegraphics[width=\textwidth]{../code/polaris/docs/fastest_slowest_network_sizes_evolution.png}
     \caption{Fastest vs slowest agent learning trajectories across network sizes. Each subplot shows the mean incorrect action probability over time with $95\%$ confidence intervals (shaded regions) for the fastest (green) and slowest (red) learning agents. The learning rates $r$ are calculated using log-linear regression. Results demonstrate the learning barrier effect where slowest agents remain bounded while fastest agents achieve superior performance in larger networks.}
     \label{fig:size_comparison}
 \end{figure}
 
 Our analysis reveals three key phenomena that validate and extend the theoretical predictions: the emergence of learning barriers, the realization of coordination benefits, and the dynamic formation of information revelation roles.
 
-\paragraph{Learning Barriers Emerge Systematically} Across all network configurations and episodes, we consistently observe a significant reduction in the slowest-learning agent's rate compared to the autarky rate. Figure \ref{fig:size_comparison} demonstrates this barrier effect by aggregating the trajectories of whichever agent learns slowest in each episode. This finding directly supports the theoretical prediction of Theorem 1. While we cannot observe whether the bound significantly exceeds the autarky rate as the theorem suggests—such validation would require much larger networks and higher computational resources—the consistent emergence of learning barriers across all configurations provides strong empirical support for the theoretical framework.
+\paragraph{Learning Barriers} Across all network configurations and episodes, we consistently observe a significant reduction in the slowest-learning agent's rate compared to the autarky rate. Figure \ref{fig:size_comparison} demonstrates this barrier effect by aggregating the trajectories of whichever agent learns slowest in each episode. This finding directly supports the theoretical prediction of Theorem 1. While we cannot observe whether the bound significantly exceeds the autarky rate as the theorem suggests—such validation would require much larger networks and higher computational resources—the consistent emergence of learning barriers across all configurations provides strong empirical support for the theoretical framework.
 
-\paragraph{Coordination Benefits Materialize in Larger Networks} In networks with $n \geq 4$ agents, the fastest-learning agents consistently demonstrate superior performance compared to isolated agents, confirming the coordination benefits predicted by Theorem 2. This demonstrates that social learning enables some agents to surpass single-agent performance, though at the expense of others. The systematic nature of this improvement across different network sizes suggests that the coordination benefits are robust features of multi-agent social learning rather than artifacts of specific configurations. However, similar to our findings on learning barriers, we cannot observe whether the learning rate of the slowest-learning agent can surpass the autarky rate for sufficiently large networks as the theorem suggests.
+\paragraph{Coordination Benefits} In networks with $n \geq 4$ agents, the fastest-learning agents consistently demonstrate superior performance compared to isolated agents, confirming the coordination benefits predicted by Theorem 2. This demonstrates that social learning enables some agents to surpass single-agent performance, though at the expense of others. The systematic nature of this improvement across different network sizes suggests that the coordination benefits are robust features of multi-agent social learning rather than artifacts of specific configurations. However, similar to our findings on learning barriers, we cannot observe whether the learning rate of the slowest-learning agent can surpass the autarky rate for sufficiently large networks as the theorem suggests.
 
-\paragraph{Information Revelation Through Dynamic Role Assignment} Our results reveal a systematic pattern where agents naturally emerge as either information generators or information exploiters within each episode. The agents that learn slowest exhibit higher variance in their action choices (evident from the wider confidence intervals in Figure \ref{fig:size_comparison}), indicating more exploratory behavior that enables other agents to make better-informed decisions. Crucially, this division of labor emerges dynamically—different agents assume these roles across episodes, suggesting the phenomenon arises from learning dynamics rather than fixed agent characteristics.
+\paragraph{Information Revelation Through Dynamic Role Assignment} Our results reveal a systematic pattern where agents naturally emerge as either information generators or information exploiters within each episode—a phenomenon that parallels the dynamic role assignment observed in strategic experimentation, where agents differentiate into high and low allocators. In learning without experimentation, the agents that learn slowest exhibit higher variance in their action choices (evident from the wider confidence intervals in Figure \ref{fig:size_comparison}), indicating more exploratory behavior that enables other agents to make better-informed decisions. This mirrors the information generation role played by high allocators in strategic experimentation, who provide valuable learning signals through their experimental choices.
+
+Crucially, this division of labor emerges dynamically in both scenarios—different agents assume these roles across episodes (Figure \ref{fig:slowest_agent_network_positions}), suggesting the phenomenon arises from learning dynamics rather than fixed agent characteristics. This consistency across fundamentally different social learning environments demonstrates that dynamic role assignment represents a robust feature of multi-agent learning systems, where complementary specialization enhances collective information processing regardless of whether the mechanism operates through allocation patterns or exploration variance.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{../code/polaris/results/brandl_experiment/agent_performance/fastest_slowest_network_types_evolution.png}
+    \includegraphics[width=\textwidth]{../code/polaris/docs/fastest_slowest_network_types_evolution.png}
     \caption{Fastest vs slowest agent learning trajectories across network topologies. Each subplot compares performance in different network structures (complete, ring, star, random) with 4 agents. The confidence intervals reveal how network topology affects the learning rate disparity between fastest and slowest agents, with complete networks showing the most pronounced differentiation due to enhanced information sharing.}
     \label{fig:type_comparison}
 \end{figure}
 
-\paragraph{Network Structure Shapes Information Flow} Figure \ref{fig:type_comparison} reveals how network topology influences learning dynamics. Complete networks facilitate the most effective information sharing, producing the largest performance gaps between fastest and slowest learners. Ring networks show more uniform learning rates due to limited information flow, while star networks create pronounced differences between central and peripheral agents. These patterns align with theoretical insights that information aggregation depends critically on network structure, though the specific mechanisms through which topology affects learning warrant further investigation.
-
+\subparagraph{Network Structure \& Information Flow} Figure \ref{fig:type_comparison} reveals how network topology influences learning dynamics. Complete networks facilitate the most effective information sharing, producing the largest performance gaps between fastest and slowest learners. Ring networks show more uniform learning rates due to limited information flow, while star networks create pronounced differences between central and peripheral agents. These patterns align with theoretical insights that information aggregation depends critically on network structure, though the specific mechanisms through which topology affects learning warrant further investigation.
+\iffalse
 To understand the underlying mechanisms determining which agents become information generators, we examine the roles of network position and signal quality—two factors that could potentially explain the emergence of learning disparities.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{../code/polaris/results/brandl_experiment/agent_performance/slowest_agent_network_positions.png}
+    \includegraphics[width=\textwidth]{../code/polaris/docs/slowest_agent_network_positions.png}
     \caption{The position of the slowest-learning agent in the network over time. The frequency of being the slowest-learning agent is calculated as the average number of episodes that this position is occupied by the slowest-learning agent. The slowest-learning agent is the agent that learns the slowest in each episode.}
     \label{fig:slowest_agent_network_positions}
 \end{figure}
 
-\paragraph{Signal Quality, Not Network Position, Determines Learning Roles} Our analysis reveals that network position alone cannot predict learning performance. Figure \ref{fig:slowest_agent_network_positions} shows that the identity of the slowest-learning agent distributes approximately uniformly across network positions, indicating that structural network advantages do not systematically determine learning performance. This finding suggests that network topology alone cannot predict which agents will act as information generators.
+\subparagraph{Determinants of Learning Roles} Our analysis reveals that network position alone cannot predict learning performance. Figure \ref{fig:slowest_agent_network_positions} shows that the identity of the slowest-learning agent distributes approximately uniformly across network positions, indicating that structural network advantages do not systematically determine learning performance. This finding suggests that network topology alone cannot predict which agents will act as information generators.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{../code/polaris/results/brandl_experiment/agent_performance/signal_quality_vs_learning_performance.png}
+    \includegraphics[width=\textwidth]{../code/polaris/docs/signal_quality_vs_learning_performance.png}
     \caption{The learning performance of POLARIS agents as a function of the signal quality. Each point corresponds to a single agent in a single episode. The signal quality is calculated as the average correctness of the private signal within the episode.}
     \label{fig:signal_quality_vs_learning_performance}
 \end{figure}
 
-In contrast, Figure \ref{fig:signal_quality_vs_learning_performance} demonstrates a strong positive correlation between signal quality and learning performance. Agents who receive lower-quality private signals consistently exhibit slower learning rates, indicating that the primary determinant of becoming a slow learner is the stochastic realization of signal quality rather than strategic positioning within the network. Agents receiving more accurate private signals naturally learn faster, while those receiving noisier signals become information generators whose exploratory behavior, though individually costly, benefits the overall network through enhanced information revelation.
+In contrast, Figure \ref{fig:signal_quality_vs_learning_performance} demonstrates a strong positive correlation between signal quality and learning performance. Agents who receive lower-quality private signals consistently exhibit slower learning rates, indicating that the primary determinant of becoming a slow learner is the stochastic realization of signal quality rather than strategic positioning within the network. Agents receiving more accurate private signals naturally learn faster, while those receiving noisier signals become information generators whose exploratory behavior, though individually costly, benefits the overall network through enhanced information revelation.\fi
 
 \paragraph{Implications and Validation} These results demonstrate that our POAMG framework successfully captures the essential features of social learning without experimentation, validating both the learning barriers that limit information aggregation and the coordination benefits that emerge in well-connected networks. The computational approach complements theoretical analysis by revealing the dynamics of strategy discovery and the distributional properties of learning rates across different network configurations.
 
-Crucially, our episode-wise analysis methodology shows that the theoretical bounds from \citet{brandl2024} represent robust properties of the multi-agent learning system rather than characteristics of specific agents. In any given episode, different agents may assume the roles of fastest or slowest learners, yet the aggregate behavior consistently respects the theoretical limits. This emergent division of labor—where some agents naturally become information generators while others exploit this information—arises from the learning dynamics themselves rather than from predetermined agent roles, providing computational validation for the theoretical insights about social learning barriers and coordination benefits.
+Crucially, our episode-wise analysis methodology shows that the theoretical bounds from \citet{brandl2024} represent robust properties of the multi-agent learning system rather than characteristics of specific agents. In any given episode, different agents may assume the roles of fastest or slowest learners, yet the aggregate behavior consistently respects the theoretical limits. This emergent division of labor—where some agents naturally become information generators while others exploit this information—arises from the learning dynamics themselves rather than from predetermined agent roles, providing computational validation for the theoretical insights about social learning barriers and coordination benefits despite the equilibrium convergence limitations discussed in our methodological framework.
 
 
