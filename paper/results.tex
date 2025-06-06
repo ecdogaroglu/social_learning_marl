@@ -19,14 +19,14 @@ Catastrophic forgetting represents a fundamental limitation in neural network le
 
 In our social learning environments, this compatibility assumption fails completely. When the optimal policy in state A requires action X while the optimal policy in state B demands the opposite action Y, no meaningful knowledge transfer is possible between episodes with different state realizations. The literature on negative transfer confirms that attempting to force knowledge sharing between fundamentally incompatible tasks degrades performance rather than enhancing it \citep{ahn2024catastrophic, wu2021online}. Traditional continual learning mechanisms that aim to "consolidate" or "protect" previous learning become counterproductive when such protection would directly undermine the acquisition of conflicting but equally necessary knowledge.
 
-These fundamental constraints require us to reset agent parameters at the beginning of each episode rather than allowing continuous learning across state realizations. While this methodological necessity prevents direct measurement of the equilibrium strategies that economic theory and our POAMG framework predict, it does not invalidate our computational approach. Rather, it compels us to develop alternative analytical methodologies that can extract meaningful insights about multi-agent strategic behavior despite these inherent limitations of applying reinforcement learning to environments with conflicting learning objectives.
+These fundamental constraints force us to reset agent parameters at the beginning of each episode rather than allowing continuous learning across state realizations—a methodological compromise that fundamentally undermines our ability to directly test the theoretical equilibrium conditions. This parameter reset prevents agents from developing the ex ante conditional strategies that both economic theory and our POAMG framework predict, instead forcing them to learn state-specific policies that cannot generalize across different environmental realizations.
 
-Our experimental methodology therefore focuses on within-episode learning dynamics and cross-episode pattern analysis. By examining how agents adapt their behavior within episodes and identifying systematic patterns across episodes, we can still characterize the essential features of multi-agent social learning, even when direct equilibrium convergence measurement is precluded by computational limitations.
+Given these constraints, our experimental methodology necessarily shifts focus to within-episode learning dynamics and cross-episode pattern analysis. This indirect approach allows us to characterize certain features of multi-agent social learning, though it falls short of the direct equilibrium validation that would constitute ideal theoretical testing.
 
-\subsection{Two-Staged Analysis Methodology}
-\label{sec:two-staged-analysis}
+\subsection{Ex-Post Analysis Methodology}
+\label{sec:ex-post-analysis}
 
-To address the catastrophic forgetting limitation while still extracting meaningful insights about multi-agent learning patterns, we adopt a consistent two-staged analysis approach across both experimental scenarios. This methodology enables robust characterization of learning dynamics despite the fundamental constraints of applying reinforcement learning to environments with fixed but episode-varying states.
+Recognizing that catastrophic forgetting prevents direct measurement of equilibrium strategies, we implement an ex-post analysis methodology as a workaround to extract off-equilibrium learning patterns. While this approach cannot resolve the fundamental limitations discussed above, it provides a systematic framework for analyzing the learning patterns that we can observe within the constraints of our computational approach.
 
 \paragraph{Stage 1: Within-Episode Role Identification} For each episode $e$, we identify agents that exhibit extreme performance characteristics. In strategic experimentation, we track cumulative allocation patterns:
 \begin{equation}
@@ -47,7 +47,7 @@ where $r_e^i$ is agent $i$'s learning rate in episode $e$.
 \end{equation}
 where $P_{t,e}^i$ represents the relevant performance metric (cumulative allocation, learning accuracy, etc.) for agent $i$ at time $t$ in episode $e$.
 
-This methodology reveals whether observed disparities represent structural features of multi-agent learning or merely artifacts of specific agent characteristics like network position, as different agents assume extreme roles across different episodes.
+This methodology provides a limited window into multi-agent learning patterns, allowing us to examine whether observed disparities represent structural features that persist across episodes rather than artifacts of specific agent characteristics.
 
 \section{Strategic Experimentation}
 
@@ -79,7 +79,7 @@ Each agent observes the increments in the public background signal, their own pa
 
 We implement comprehensive experiments using specialized experimental frameworks for both detailed single-configuration analysis and comparative analysis across different group sizes. Our experimental protocol examines group sizes of $n \in \{1, 2, 4, 8\}$ agents; safe payoff of $r_{\text{safe}} = 0.5$; drift rates of $[0, 1]$ for bad and good states respectively; jump rates of $[0, 0.1]$ with jump sizes of $[1.0, 1.0]$; background informativeness of $k_0 = 0.001$; and time discretization step of $\Delta t = 1.0$.
 
-Following our two-staged analysis methodology, the POLARIS implementation tracks: (1) Convergence of individual agent allocation strategies to state-dependent optimal actions within episodes; (2) Belief fluctuations over time to assess the impact of neighbor action observation on learning; (3) Cumulative allocation disparities between highest and lowest allocators as a function of group size; and (4) Episode-wise analysis of allocation patterns across different true states (good vs. bad).
+Following our ex-post analysis methodology, the POLARIS implementation tracks: (1) Convergence of individual agent allocation strategies to state-dependent optimal actions within episodes; (2) Belief fluctuations over time to assess the impact of neighbor action observation on learning; (3) Cumulative allocation disparities between highest and lowest allocators as a function of group size; and (4) Episode-wise analysis of allocation patterns across different true states (good vs. bad).
 
 For each configuration, we run experiments for comparative sweeps across group sizes, focusing on the emergence of allocation patterns and their relationship to theoretical predictions. Our analysis emphasizes within-episode learning dynamics rather than cross-episode equilibrium convergence due to the catastrophic forgetting constraint.
 
@@ -158,7 +158,7 @@ In this setup, agents are rewarded based on their posterior belief given the pri
 
 We implement comprehensive experiments to validate these theoretical predictions and explore the learning dynamics under various network structures. Our experimental protocol examines network sizes of $n \in \{1, 2, 4, 8\}$ agents; network topologies including complete, ring, star, and random networks; signal accuracy of $p = 0.75$ \iffalse(we use the same signal accuracy as in the paper's example where $r_{\text{aut}} \approx 0.14$, $r_{\text{crd}} \approx 0.55$, and $r_{\text{bdd}} \approx 1.10$)\fi; and learning metrics consisting of empirical learning rates extracted via log-linear regression.
 
-Following our two-staged analysis methodology described in Section \ref{sec:two-staged-analysis}, we track each agent's incorrect action probability as the probability assignment of the policy network to the incorrect action over time and estimate individual learning rates by fitting log-linear regressions to identify the fastest and slowest learners within each episode. We then aggregate the performance of these extreme learners across episodes to examine whether the observed learning disparities represent structural features of multi-agent learning rather than artifacts of specific agent characteristics.
+Following our ex-post analysis methodology described in Section \ref{sec:ex-post-analysis}, we track each agent's incorrect action probability as the probability assignment of the policy network to the incorrect action over time and estimate individual learning rates by fitting log-linear regressions to identify the fastest and slowest learners within each episode. We then aggregate the performance of these extreme learners across episodes to examine whether the observed learning disparities represent structural features of multi-agent learning rather than artifacts of specific agent characteristics.
 
 \subsection{Results and Analysis}
 \iffalse
