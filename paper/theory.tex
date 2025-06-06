@@ -68,7 +68,7 @@ Assuming the communicating property of the subprocesses, we can establish conver
 \begin{proof}
     See Appendix \ref{appendix:stochasticallystable} for a detailed proof.
 \end{proof}
-This convergence result has profound implications for our framework. By establishing the existence of a unique stochastically stable distribution, we provide a solid theoretical foundation for defining optimization objectives and analyzing equilibrium behavior in partially observable active Markov games. The stochastically stable distribution represents the limiting behavior of the system, independent of initial conditions, allowing us to characterize the long-run outcomes of social learning processes. This property is crucial for developing algorithms that optimize for long-term performance rather than myopic rewards, aligning with our goal of modeling sophisticated social learning dynamics.
+This convergence result has profound implications for our framework. By establishing the existence of a unique stochastically stable distribution, we provide a solid theoretical foundation for defining optimization objectives and analyzing equilibrium behavior in partially observable active Markov games. The stochastically stable distribution represents the limiting behavior of the system, independent of initial conditions, allowing us to characterize the long-run outcomes of social learning processes. This property is crucial for developing algorithms that optimize for long-term performance rather than myopic rewards, aligning with our goal of modeling sophisticated social learning dynamics. This property is crucial for developing algorithms that optimize for long-term performance rather than myopic rewards, aligning with our goal of modeling sophisticated social learning dynamics.
 
 \section{Incentives}
 We now formalize the optimization objectives for agents in our Partially Observable Active Markov Game framework. In contrast to traditional reinforcement learning settings that typically employ discounted rewards, we first focus on the average reward criterion as our fundamental optimization objective.
@@ -276,7 +276,7 @@ To address these computational challenges and make our theoretical framework pra
 
 \section{Algorithm: POLARIS}
 
-In this section, we present POLARIS (Partially Observable Learning with Active Reinforcement In Social environments), our practical implementation of the theoretical framework. POLARIS extends and improves upon the FURTHER algorithm \cite{kim2022influencing} with specialized components for belief modeling, information propagation through networks, and advantage-weighted training. The algorithm uses neural network approximations to overcome the computational challenges outlined in the previous section while preserving the key insights of our theoretical framework. It consists of three integrated modules: a belief processing module, an inference learning module, and a reinforcement learning module, which operate in concert to enable sophisticated social learning in partially observable environments. The architecture integrates several neural network components working in tandem: a Transformer-based belief processor~\cite{vaswani2017attention} provides sophisticated temporal pattern recognition through its self-attention mechanisms; an inference module implementing a Graph Neural Network (GNN)~\cite{scarselli2009graph} with temporal attention for network-aware representations; and Multi Agent Soft Actor-Critic (MASAC) following \citet{kim2022influencing} with both average and discounted reward formulations to address the long-term planning requirements of social learning. To maintain performance across changing environments, particularly when the true state changes, POLARIS employs Elastic Weight Consolidation (EWC)~\cite{kirkpatrick2017overcoming} that selectively preserves important parameters while allowing adaptation to new conditions. We provide the detailed network architectures in Appendix \ref{appendix:neural_architectures}.
+In this section, we present POLARIS (Partially Observable Learning with Active Reinforcement In Social environments), our practical implementation of the theoretical framework. POLARIS extends and improves upon the FURTHER algorithm \cite{kim2022influencing} with specialized components for belief modeling, information propagation through networks, and advantage-weighted training. The algorithm uses neural network approximations to overcome the computational challenges outlined in the previous section while preserving the key insights of our theoretical framework. It consists of three integrated modules: a belief processing module, an inference learning module, and a reinforcement learning module, which operate in concert to enable sophisticated social learning in partially observable environments. The architecture integrates several neural network components working in tandem: a Transformer-based belief processor~\cite{vaswani2017attention} provides sophisticated temporal pattern recognition through its self-attention mechanisms; a Temporal Graph Neural Network (GNN) with multi-head attention for network-aware representations; and Soft Actor-Critic (SAC) with dual Q-networks supporting discrete action spaces and both average and discounted reward formulations. We provide the detailed network architectures in Appendix \ref{appendix:neural_architectures}.
 
 \subsection{Belief Processing Module}
 
@@ -292,133 +292,107 @@ Unlike traditional recurrent approaches, the Transformer architecture introduces
     \mathbb{P}(s|b^i_t) = \text{Softmax}(f_{\text{belief\_head}}(b^i_t)) 
 \end{align}
 
-This explicit representation allows for more interpretable belief states and enables advantage-weighted training, where the belief processing is optimized not just to track observations but also to produce beliefs that lead to high-value actions. By maintaining a probability distribution over states rather than just an abstract representation, the model provides transparency into its decision-making process and facilitates debugging and analysis of social learning dynamics.
+This explicit representation provides transparency into decision-making processes and facilitates debugging and analysis of social learning dynamics.
+
+The belief processor is trained using different objectives depending on the signal type. For discrete signals, it uses a standard cross-entropy loss to track the underlying state distribution:
+\begin{align}
+    J^i_{\text{transformer,discrete}}(\psi^i_{\text{Transformer}}) = \mathbb{E}_{D^i}\left[-\log \mathbb{P}(s_t|b^i_t; \psi^i_{\text{Transformer}})\right]
+\end{align}
+
+For continuous signals (such as Lévy processes), POLARIS employs a specialized transformer loss function that computes the expected signal distribution based on the current belief state and environment parameters:
+\begin{align}
+    J^i_{\text{transformer,continuous}}(\psi^i_{\text{Transformer}}) = \mathbb{E}_{D^i}\left[\|o^i_t - \hat{o}^i_t(b^i_t, \text{env\_params}; \psi^i_{\text{Transformer}})\|^2\right]
+\end{align}
+
+where $D^i$ is agent $i$'s replay buffer containing stored transitions, $\hat{o}^i_t$ is the predicted continuous signal based on the belief state and environment parameters. This ensures that the belief processor maintains accurate state estimation capabilities for both discrete and continuous observation types throughout training.
 
 \subsection{Inference Learning Module}
 
-POLARIS implements a Graph Neural Network (GNN) with temporal attention for network-aware social learning. This inference module represents the multi-agent system as a graph where nodes correspond to agents and edges represent observational relationships in the social network. The module outputs distribution parameters:
+POLARIS implements a Temporal Graph Neural Network (GNN) with multi-head attention for network-aware social learning. This inference module represents the multi-agent system as a dynamic graph where nodes correspond to agents and edges represent observational relationships that are automatically inferred from the neighbor actions tensor. The module supports both discrete and continuous signal processing through separate GNN pathways:
 
 \begin{align}
-    \mu_t, \log\sigma_t = \text{GNN}_{\text{temporal}}(o^i_t, \boldsymbol{a}_t, r^i_t, o^i_{t+1}; \phi^i_{\text{GNN}})
+    \mu_t, \log\sigma_t = \text{TemporalGNN}(o^i_t, \boldsymbol{a}_t, r^i_t, o^i_{t+1}; \phi^i_{\text{GNN}})
 \end{align}
 
-Here, $\mu_t$ and $\log\sigma_t$ parameterize a Gaussian distribution from which latent variables $\boldsymbol{\hat{z}}^{-i}_t$ are sampled, encoding information about other agents' policies and beliefs. The GNN architecture adapts dynamically to the network topology, enabling automatic configuration for various social network structures. It utilizes multi-head attention mechanisms across both spatial (network) and temporal dimensions, allowing it to differentially weigh connections between agents based on their decision relevance. A key feature is the temporal memory system that maintains a sliding window of past states, enabling temporal attention mechanisms that help the model reason about the evolution of other agents' beliefs and strategies over time. This approach proves especially effective for complex network topologies where information flow patterns significantly influence learning dynamics.
+The network topology is dynamically constructed from observed neighbor actions, where non-zero entries indicate actual neighbors (edges exist) and zero entries indicate non-neighbors (no edges). This approach enables automatic adaptation to various social network structures without requiring explicit network specification.
 
-The inference module learns a mapping from observable trajectories to latent variables that are predictive of other agents' behaviors, optimized using the Evidence Lower Bound (ELBO) objective: \footnote{See \cite{kim2022influencing} for a detailed derivation of the ELBO objective in the sequential setting.}
+Key architectural features include dual-pathway processing that employs separate Graph Attention Network (GAT) layers for discrete (one-hot encoded) and continuous signals, enabling flexible handling of different observation types. The system incorporates multi-head attention mechanisms that operate both spatially (based on network topology) and temporally, differentially weighing connections based on decision relevance. A temporal memory system maintains past node features and edge indices through a sliding window buffer for temporal attention computation. The architecture leverages Graph Attention Networks (GAT) with multiple GAT layers containing attention heads that learn to focus on the most relevant neighboring agents.
+
+The inference module learns a mapping from observable trajectories to latent variables predictive of other agents' behaviors, optimized using the Evidence Lower Bound (ELBO) objective \citep{kim2022influencing}:
 
 \begin{align}
-    J^i_{elbo} = \mathbb{E}_{\mathbb{P}(\tau^i_{0:t}),\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{1:t}|\tau^i_{0:t-1};\phi^i_{GNN})}\left[ \sum_{t'=1}^t \log \mathbb{P}(\boldsymbol{a}^{-i}_{t'}|o^i_{t'}, \boldsymbol{\hat{z}}^{-i}_{t'}; \phi^i_{GNN}) \right. \\
-    \left. - \alpha_{KL} D_{KL}(\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{t'}|\tau^i_{t'-1}; \phi^i_{GNN})||\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{t'-1}))\right]
+    J^i_{\text{elbo}} = \mathbb{E}_{\mathbb{P}(\tau^i_{0:t}),\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{1:t}|\tau^i_{0:t-1};\phi^i_{\text{GNN}})}\left[ \sum_{t'=1}^t \log \mathbb{P}(\boldsymbol{a}^{-i}_{t'}|o^i_{t'}, \boldsymbol{\hat{z}}^{-i}_{t'}; \phi^i_{\text{GNN}}) \right. \\
+    \left. - \alpha_{KL} D_{KL}(\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{t'}|\tau^i_{t'-1}; \phi^i_{\text{GNN}})||\mathbb{P}(\boldsymbol{\hat{z}}^{-i}_{t'-1}))\right]
 \end{align}
 
-The ELBO objective balances reconstruction accuracy (predicting other agents' actions) with regularization through the KL divergence term, which encourages temporal consistency in the latent space. This is particularly important in social learning settings where abrupt changes in models of other agents can lead to unstable learning dynamics.
-
-The inference module additionally produces opponent belief distributions, enabling agents to model other agents' understanding of the environment:
+The ELBO objective balances reconstruction accuracy (predicting other agents' actions) with temporal consistency through a temporal KL divergence term that encourages smooth evolution of latent representations over time:
 
 \begin{align}
-    \mathbb{P}^i(\boldsymbol{b}^{-i}_t|\tau^i_{0:t}) = \text{Softmax}(f_{\text{opponent\_belief}}(\mu_t, \log\sigma_t))
+    D_{KL}^{\text{temporal}} = \frac{1}{2} \mathbb{E}_t \left[ \log \frac{|\boldsymbol{\Sigma}_{t-1}|}{|\boldsymbol{\Sigma}_t|} - d + \text{tr}(\boldsymbol{\Sigma}_{t-1}^{-1}\boldsymbol{\Sigma}_t) + (\boldsymbol{\mu}_{t-1} - \boldsymbol{\mu}_t)^T \boldsymbol{\Sigma}_{t-1}^{-1} (\boldsymbol{\mu}_{t-1} - \boldsymbol{\mu}_t) \right]
 \end{align}
 
-This second-order belief modeling allows for sophisticated strategic reasoning, as agents can anticipate how others will respond to their actions based not just on past behavior but on inferred beliefs about the environment.
+where $\boldsymbol{\mu}_t$ and $\boldsymbol{\Sigma}_t$ are the mean and covariance of the latent distribution at time $t$. This temporal smoothing prevents abrupt changes in opponent models that could destabilize learning dynamics.
 
 \subsection{Reinforcement Learning Module}
 
-The reinforcement learning module uses the Soft Actor-Critic (SAC) framework with both average and discounted reward formulations. The policy and action-value functions are conditioned on belief states and inferred latent variables:
+The reinforcement learning module uses the Soft Actor-Critic (SAC) framework with dual Q-networks and entropy regularization. The implementation supports discrete action spaces:
 
 \begin{align}
-    \pi^i(a^i|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i) &= 
-    \begin{cases}
-        \text{Categorical}(a^i|\text{MLP}_{\text{policy}}(b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i)) & \text{for discrete actions} \\
-        \mathcal{N}(\mu(b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i), \sigma(b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i)) & \text{for continuous actions}
-    \end{cases} \\
+    \pi^i(a^i|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i) &= \text{Categorical}(a^i|\text{MLP}_{\text{policy}}(b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i)) \\
     q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, \boldsymbol{a}; \psi^i_{\beta}) &= \text{MLP}_{\text{value}}(b^i, \boldsymbol{\hat{z}}^{-i}, \boldsymbol{a}; \psi^i_{\beta})
 \end{align}
 
-For continuous action spaces, the policy network outputs the mean $\mu$ and standard deviation $\sigma$ of a Gaussian distribution, where actions are sampled using the reparameterization trick. Then, hyperbolic tangent function is applied to bound the actions within a desired range, with appropriate adjustments to the log probability calculation.
+where MLP stands for \emph{Multi Layer Perceptron}. The SAC framework's entropy regularization promotes exploration and prevents premature convergence to suboptimal equilibria, crucial in partially observable settings where perfect inference is impossible.
 
-The SAC framework is particularly well-suited for social learning environments due to its entropy regularization, which promotes exploration and prevents premature convergence to suboptimal equilibria. By supporting both categorical distributions for discrete action spaces and Gaussian distributions for continuous action spaces, the policy network can express uncertainty about optimal actions—crucial in partially observable settings where perfect inference is rarely possible. The value functions measure expected returns conditioned not only on the agent's belief state but also on inferred representations of other agents' policies, enabling strategic reasoning about the long-term consequences of actions in a multi-agent context. The RL module is optimized using three objectives, each addressing a different aspect of the learning problem:
+The RL module optimizes three objectives:
 
-\subparagraph{Value Function Objective} POLARIS supports both discounted and average reward formulations to accommodate different types of social learning problems. For discounted returns:
+\subparagraph{Value Function Objective} POLARIS supports both discounted and average reward formulations. For discounted returns:
 \begin{align}
     J^i_q(\psi^i_{\beta}) &= \mathbb{E}_{D^i}\left[(y - q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, \boldsymbol{a}; \psi^i_{\beta}))^2\right] \\
-    y &= r^i + \gamma \cdot v^i_{\theta^i}(b^i_{t+1}, \boldsymbol{\hat{z}}^{-i}_{t+1}; \bar{\psi}^i_{\beta})
+    y &= r^i + \gamma \cdot \min_{\beta=1,2} q^i_{\theta^i}(b^i_{t+1}, \boldsymbol{\hat{z}}^{-i}_{t+1}, a'^i; \bar{\psi}^i_{\beta})
 \end{align}
 
-where $\gamma \in [0, 1)$ is the discount factor. This formulation is appropriate for scenarios with finite horizons or where near-term performance is particularly valued.
-
-For average reward:
+For average reward (with automatically estimated average reward rate $\rho^i$):
 \begin{align}
-    J^i_q(\psi^i_{\beta}, \rho^i_{\theta^i}) &= \mathbb{E}_{D^i}\left[(y - q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, \boldsymbol{a}; \psi^i_{\beta}))^2\right] \\
-    y &= r^i - \rho^i_{\theta^i} + v^i_{\theta^i}(b^i_{t+1}, \boldsymbol{\hat{z}}^{-i}_{t+1}; \bar{\psi}^i_{\beta})
+    J^i_q(\psi^i_{\beta}, \rho^i) &= \mathbb{E}_{D^i}\left[(y - q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, \boldsymbol{a}; \psi^i_{\beta}))^2\right] \\
+    y &= r^i - \rho^i + \min_{\beta=1,2} q^i_{\theta^i}(b^i_{t+1}, \boldsymbol{\hat{z}}^{-i}_{t+1}, a'^i; \bar{\psi}^i_{\beta})
 \end{align}
-
-The average reward formulation better captures long-run learning dynamics and asymptotic behavior by equally valuing rewards across all future time periods. By supporting both approaches, POLARIS can be tailored to match the specific characteristics of different social learning scenarios without requiring structural changes to the architecture.
 
 \subparagraph{Policy Objective} Maximizes expected value plus entropy:
 \begin{align}
-    J^i_{\pi}(\theta^i) &= \mathbb{E}_{D^i}\left[\sum_{a^i} \pi^i(a^i|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i) \sum_{\boldsymbol{a}^{-i}} \pi^{-i}(\boldsymbol{a}^{-i}|\boldsymbol{b}^{-i}, \boldsymbol{\hat{z}}^{-i}) \min_{\beta=1,2} q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, a^i, \boldsymbol{a}^{-i}; \psi^i_{\beta}) \right. \\
-    & \quad \left. + \alpha_e H(\pi^i(\cdot|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i))\right]
+    J^i_{\pi}(\theta^i) &= \mathbb{E}_{D^i}\left[\mathbb{E}_{a^i \sim \pi^i}\left[\min_{\beta=1,2} q^i_{\theta^i}(b^i, \boldsymbol{\hat{z}}^{-i}, a^i, \boldsymbol{a}^{-i}; \psi^i_{\beta}) + \alpha_e H(\pi^i(\cdot|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i))\right]\right]
 \end{align}
-
-For discrete action spaces, the summation and entropy terms are computed directly over the action probabilities. For continuous action spaces, the expectation is approximated using samples from the policy, and the entropy term is calculated as:
-\begin{align}
-    H(\pi^i(\cdot|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i)) = 
-    \begin{cases}
-        -\sum_{a^i} \pi^i(a^i|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i) \log \pi^i(a^i|b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i) & \text{for discrete actions} \\
-        \frac{1}{2}\log\det(2\pi e \sigma^2(b^i, \boldsymbol{\hat{z}}^{-i}; \theta^i)) & \text{for continuous actions}
-    \end{cases}
-\end{align}
-
-The entropy calculation must also account for the hyperbolic tangent transformation using the change of variables formula.
-
-The policy objective combines expected future returns with an entropy bonus, creating a balance between exploitation and exploration. The entropy term encourages the policy to maintain stochasticity, preventing premature convergence to deterministic policies that might be suboptimal in partially observable settings. The use of the minimum value across dual Q-networks helps mitigate overestimation bias—a persistent challenge in Q-learning approaches. This is particularly important in social learning contexts where overestimated values can lead to overly optimistic strategies that fail to account for the strategic adaptations of other agents.
-
 
 \subsection{Training Process}
 
-The overall training process interleaves updates to the three modules, ensuring that improvements in one component can benefit the others within each training iteration. Algorithm 1 outlines the complete POLARIS training procedure for a single agent.
+The training process interleaves updates across all modules within each iteration. Algorithm 1 outlines the complete POLARIS training procedure.
 
 \begin{algorithm}[!htbp]
 \caption{POLARIS Training Algorithm for Single Agent}
 \begin{algorithmic}[1]
-\State Initialize belief processor, inference module, policy and value networks with parameters $\psi^i_{\text{Transformer}}$, $\phi^i$, $\theta^i$, $\psi^i_{\beta}$
+\State Initialize belief processor, inference GNN, policy and Q-networks with parameters $\psi^i_{\text{Transformer}}$, $\phi^i_{\text{GNN}}$, $\theta^i$, $\psi^i_{\beta}$
 \State Initialize replay buffer $D^i$, initial belief $b^i_0$, and latent state $\boldsymbol{\hat{z}}^{-i}_0$
-\State Determine action space type (discrete or continuous)
+\State Initialize target networks
 \For{each step $t$}
-    \State Observe signal $o^i_t$ and joint action $\boldsymbol{a}_{t-1}$
+    \State Observe signal $o^i_t$ and neighbor actions $\boldsymbol{a}^{-i}_{t-1}$
     \State Update belief: $b^i_t, \mathbb{P}(s|b^i_t) = f_{\text{Transformer}}(b^i_{t-1}, o^i_t, \boldsymbol{a}_{t-1}; \psi^i_{\text{Transformer}})$
-    \State Select action: 
-    \If{discrete action space}
-        \State $a^i_t \sim \pi^i(\cdot|b^i_t, \boldsymbol{\hat{z}}^{-i}_t; \theta^i)$ \Comment{Sample from categorical distribution}
-    \Else
-        \State $\mu, \sigma = \text{MLP}_{\text{policy}}(b^i_t, \boldsymbol{\hat{z}}^{-i}_t; \theta^i)$
-        \State $\epsilon \sim \mathcal{N}(0, I)$
-        \State $a^i_t = \tanh(\mu + \sigma \odot \epsilon)$ \Comment{Sample using reparameterization trick}
-    \EndIf
+    \State Construct graph and infer latent: $\boldsymbol{\hat{z}}^{-i}_t = f_{\text{GNN}}(o^i_t, \boldsymbol{a}^{-i}_t, r^i_{t-1}, o^i_{t-1}; \phi^i_{\text{GNN}})$
+    \State Select action: $a^i_t \sim \text{Categorical}(\pi^i(\cdot|b^i_t, \boldsymbol{\hat{z}}^{-i}_t; \theta^i))$
     \State Execute action, observe reward $r^i_t$ and next signal $o^i_{t+1}$
-    \State Infer latent: $\boldsymbol{\hat{z}}^{-i}_{t+1} = f_{\text{GNN}}(o^i_t, \boldsymbol{a}_t, r^i_t, o^i_{t+1}; \phi^i)$
-    \State Store transition in replay buffer
+    \State Store $(o^i_t, b^i_t, \boldsymbol{\hat{z}}^{-i}_t, a^i_t, r^i_t, o^i_{t+1}, \boldsymbol{a}^{-i}_t)$ in replay buffer $D^i$
     \If{update step}
-        \State Sample batch $B$ from replay buffer $D^i$
-        \State Update inference module: $\phi^i \leftarrow \phi^i - \alpha_{\phi} \nabla_{\phi^i} J^i_{\text{elbo}}(B)$
-        \State Update value networks: $\psi^i_{\beta} \leftarrow \psi^i_{\beta} - \alpha_{\psi} \nabla_{\psi^i_{\beta}} J^i_{q}(B)$
-        \State Update policy: $\theta^i \leftarrow \theta^i - \alpha_{\theta} \nabla_{\theta^i} J^i_{\pi}(B)$ \Comment{Using appropriate entropy calculation}
+        \State Sample sequential batch $B$ from replay buffer $D^i$
+        \State Update inference GNN: $\phi^i_{\text{GNN}} \leftarrow \phi^i_{\text{GNN}} - \alpha_{\phi} \nabla_{\phi^i_{\text{GNN}}} J^i_{\text{elbo}}(B)$
+        \State Update dual Q-networks: $\psi^i_{\beta} \leftarrow \psi^i_{\beta} - \alpha_{\psi} \nabla_{\psi^i_{\beta}} J^i_{q}(B)$
+        \State Update policy: $\theta^i \leftarrow \theta^i - \alpha_{\theta} \nabla_{\theta^i} J^i_{\pi}(B)$
         \State Update belief processor: $\psi^i_{\text{Transformer}} \leftarrow \psi^i_{\text{Transformer}} - \alpha_{\psi} \nabla_{\psi^i_{\text{Transformer}}} J^i_{\text{transformer}}(B)$
         \State Update target networks: $\bar{\psi}^i_{\beta} \leftarrow \tau \psi^i_{\beta} + (1-\tau) \bar{\psi}^i_{\beta}$
-        \If{true state has changed}
-            \State Calculate Fisher matrices from current replay buffer
-            \State Register task with EWC
-        \EndIf
     \EndIf
 \EndFor
 \end{algorithmic}
 \end{algorithm}
 
-The algorithm follows a sequential process where each agent first updates its belief state based on new observations and the joint actions of all agents using the Transformer-based belief processor. Based on this updated belief and the current inference of other agents' latent states, the agent selects an action using its stochastic policy—sampling from a categorical distribution for discrete action spaces or using the reparameterization trick for continuous action spaces. After executing this action and observing the reward and next observation, the agent updates its inference of other agents' latent states using the GNN-based inference module. All of these experiences are stored in a replay buffer for later training.
+Key implementation details include sequential batch sampling, where the replay buffer maintains sequential trajectories and samples sequences rather than individual transitions, preserving temporal dependencies crucial for transformer and GNN processing. The system employs dual Q-network updates with both Q-networks updated simultaneously using minimum value selection to prevent overestimation bias. All networks utilize gradient clipping with gradient norm clipping to maintain training stability. Target networks implement soft updates using exponential moving averages for stable learning.
 
-At designated update steps, the agent samples a batch of transitions from its replay buffer and uses these to update all network components. The inference module is updated first to improve predictions of other agents' actions using the ELBO objective. Next, the value networks are updated to better estimate expected returns. The policy network is then updated to maximize expected value and entropy. Finally, the belief processor is updated using the advantage-weighted training approach. Target networks, used for stable learning in the SAC framework, are updated using a weighted average of the current and target parameters.
-
-A crucial feature of POLARIS is its adaptive response to changes in the environment state. When the true state changes, the algorithm calculates Fisher information matrices from the current replay buffer and registers a new task with the EWC mechanism, preserving important knowledge from the previous state while allowing adaptation to the new state.
-
-In the next chapter, we demonstrate the practical application of our POAMG framework and the POLARIS algorithm to canonical social learning scenarios from economic theory. The versatility of our approach is particularly evident in its ability to seamlessly handle both continuous and discrete action spaces, as well as varying types of return objectives. This capability proves essential when implementing strategic experimentation models with continuous allocation decisions and average reward objectives, and learning without experimentation models with discrete signaling actions and discounted reward objectives. Through these implementations, we validate theoretical predictions from economic models while uncovering new insights about strategic adaptation in partially observable multi-agent systems that would be difficult to obtain through purely analytical approaches. The experimental results not only demonstrate the effectiveness of our theoretical framework but also highlight how computational methods can complement and extend traditional economic analysis of social learning phenomena.
+In the next chapter, we demonstrate the practical application of our POAMG framework and the POLARIS algorithm to canonical social learning scenarios from economic theory. The versatility of our approach is particularly evident in its ability to handle both average and discounted reward formulations. This capability proves essential when implementing strategic experimentation and learning without experimentation models with discrete action spaces. Through these implementations, we validate theoretical predictions from economic models while uncovering new insights about strategic adaptation in partially observable multi-agent systems that would be difficult to obtain through purely analytical approaches. The experimental results not only demonstrate the effectiveness of our theoretical framework but also highlight how computational methods can complement and extend traditional economic analysis of social learning phenomena.
 

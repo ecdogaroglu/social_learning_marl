@@ -1385,273 +1385,112 @@ essential in social learning contexts.
 \chapter{POLARIS Architecture}
 \label{appendix:neural_architectures}
 
-This section provides detailed technical specifications of all neural network architectures used in our POLARIS implementation. We describe each component's structure, activation functions, and design considerations to enable reproducibility and thorough understanding of our approach.
+This section provides detailed technical specifications of all neural network architectures used in our POLARIS implementation. We describe each component's structure, activation functions, and design considerations to enable reproducibility and thorough understanding of our approach. POLARIS represents a significant advancement over traditional multi-agent reinforcement learning frameworks by employing Graph Neural Networks (GNNs) as the primary architecture for modeling agent interactions and temporal dependencies in partially observable social learning environments.
 
-\section{Belief Processing Module}
+POLARIS employs a modular architecture consisting of four primary components that work in tandem to enable effective learning in partially observable multi-agent environments. The belief processing module maintains belief states using transformers with attention mechanisms, while the inference learning module models other agents' behavior using Temporal Graph Neural Networks. The policy network maps beliefs and latent states to action decisions, and dual value networks estimate expected returns using a critic architecture. All components operate over the joint space of states, belief states, and policy parameters as defined in our Partially Observable Active Markov Game framework, explicitly modeling how actions influence both environmental dynamics and other agents' learning processes.
 
-In our POLARIS implementation, agents maintain and update belief states using a Transformer-based architecture~\cite{vaswani2017attention}, which effectively processes sequential observations while preserving the temporal relationships critical for social learning tasks.
+\section{Transformer Network}
 
-The TransformerBeliefProcessor replaces traditional recurrent architectures with a self-attention mechanism that can capture complex dependencies across observation sequences. The module takes a signal (private observation), neighbor actions, and the current belief state as inputs, then produces an updated belief state and belief distribution over possible environmental states.
+The belief processing module maintains and updates agents' belief states about the underlying environment state using a transformer-based architecture~\cite{vaswani2017attention}. This component processes sequences of observations and actions to form beliefs about the partially observable environment. The belief processor employs a transformer encoder with an input dimension configurable based on the observation space, using dimension $|S|$ for discrete observation spaces and dimension 1 for continuous observation spaces. The hidden dimension defaults to 256, with 4 attention heads across 2 layers and a dropout rate of 0.1.
 
-The belief processor begins with an input projection layer that maps the concatenated signal and neighbor action vectors to a hidden dimension. Specifically, for an agent receiving signal $o_t$ and observing neighbor actions $\boldsymbol{a}_t$, the input vector $x_t = [o_t, \boldsymbol{a}_t]$ is projected as:
+For discrete observation spaces, the input signal $\mathbf{o}_t \in \mathbb{R}^{|S|}$ is projected to the hidden dimension through $\mathbf{x}_{\text{proj}} = W_{\text{proj}}\mathbf{o}_t + \mathbf{b}_{\text{proj}}$. For continuous observation spaces with $\mathbf{o}_t \in \mathbb{R}$, a separate projection layer handles the scalar input: $\mathbf{x}_{\text{proj}} = W_{\text{cont}}\mathbf{o}_t + \mathbf{b}_{\text{cont}}$. Positional encodings are added to capture temporal ordering: $\mathbf{x}_{\text{input}} = \mathbf{x}_{\text{proj}} + \mathbf{PE}$, where $\mathbf{PE}$ is a learned positional encoding parameter.
 
-\begin{equation}
-    x_{\text{projected}} = W_{\text{proj}}x_t + b_{\text{proj}}
-\end{equation}
-
-This projection is then passed through a transformer encoder with multi-head self-attention. The transformer encoder consists of attention layers defined as:
+The transformer processes the sequence through multi-head self-attention layers: $\text{MultiHead}(\mathbf{X}) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)W^O$, where each attention head computes:
 
 \begin{equation}
-    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+    \text{head}_i = \text{Attention}(\mathbf{X}W^Q_i, \mathbf{X}W^K_i, \mathbf{X}W^V_i)
 \end{equation}
 
-where $Q$, $K$, and $V$ are the query, key, and value matrices derived from the input, and $d_k$ is the dimensionality of the key vectors. The multi-head attention mechanism applies this attention function in parallel across multiple representation subspaces, then concatenates the results:
+The final belief distribution is computed using appropriate activations based on the observation space: $\mathbf{b}_{\text{dist}} = \text{softmax}(W_{\text{discrete}}\mathbf{h}_{\text{final}} + \mathbf{b}_{\text{discrete}})$ for discrete observation spaces and $\mathbf{b}_{\text{dist}} = \text{sigmoid}(W_{\text{continuous}}\mathbf{h}_{\text{final}} + \mathbf{b}_{\text{continuous}})$ for continuous observation spaces, where $\mathbf{h}_{\text{final}}$ is the output from the transformer layers.
+
+\section{Graph Neural Network}
+
+The core innovation of POLARIS lies in its use of Graph Neural Networks~\citep{hamilton2020graph} to explicitly model the network structure of agent interactions. Unlike traditional approaches that treat other agents as part of the environment, our GNN-based architecture captures the relational structure between agents and enables sophisticated reasoning about network effects in social learning.
+
+The Temporal GNN serves as the inference learning module, enabling agents to predict and model the behavior of other agents over time. This component represents agents and their interactions as a dynamic graph where nodes correspond to agents and edges represent observational relationships. For each agent $i$, the GNN constructs a graph representation where each agent becomes a node with features encoding their current observation and action, connections represent observational relationships based on network topology, and node features consist of the concatenation of belief state and action: $[\mathbf{b}^i_t; a^i_t]$ for the ego agent, $[\mathbf{0}; a^j_t]$ for neighbors. allocation values are directly included in the feature representation.
+
+The GNN employs Graph Attention Networks (GAT)~\citep{veličković2018graph} that compute attention coefficients between connected nodes:
 
 \begin{equation}
-    \text{MultiHead}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)W^O
+    e_{ij} = \text{LeakyReLU}\left(\mathbf{a}^T\left[W\mathbf{h}_i \| W\mathbf{h}_j\right]\right)
 \end{equation}
 
-where each head is computed as $\text{head}_i = \text{Attention}(XW^Q_i, XW^K_i, XW^V_i)$. Our implementation uses 4 attention heads with a dimension of 64 per head.
-
-The transformer encoder is followed by feed-forward networks with ReLU activations:
-
-\begin{equation}
-    \text{FFN}(x) = \max(0, xW_1 + b_1)W_2 + b_2
-\end{equation}
-
-A belief head at the output projects the transformed representation to a probability distribution over possible environment states:
-
-\begin{equation}
-    b_{\text{dist}} = \text{softmax}(W_{\text{belief}}h_{\text{final}} + b_{\text{belief}})
-\end{equation}
-
-Where $h_{\text{final}}$ is the final hidden state from the transformer. This distribution represents the agent's belief about the current environmental state. The transformed representation also becomes the new belief state that is maintained across time steps.
-
-The transformer architecture offers several advantages for belief processing in partially observable environments. First, it can model arbitrarily long-range dependencies in observation sequences without the vanishing gradient issues that affect recurrent networks. Second, the self-attention mechanism provides a natural way to weight the importance of different observations in forming beliefs. Third, the positional encodings allow the model to incorporate temporal information while maintaining permutation invariance within each time step.
-
-\section{Inference Learning Module}
-
-The Inference Learning Module enables agents to predict and model the behavior of other agents, which is essential for effective social learning. POLARIS implements a Graph Neural Network (GNN) approach for this module, which explicitly captures the network structure of agent interactions.
-
-The GNN-based inference module represents agents and their interactions as a graph, where nodes correspond to agents and edges represent observational relationships. For each node, features include the agent's observation and action.
-
-The graph representation treats each agent as a node, with edges representing observational relationships. The GNN uses graph attention layers (GAT) that compute attention coefficients between connected nodes:
-
-\begin{equation}
-    e_{ij} = \text{LeakyReLU}(a^T[Wh_i || Wh_j])
-\end{equation}
 \begin{equation}
     \alpha_{ij} = \frac{\exp(e_{ij})}{\sum_{k \in \mathcal{N}_i} \exp(e_{ik})}
 \end{equation}
 
-where $h_i$ represents the features of node $i$, $W$ is a learned weight matrix, $a$ is an attention vector, and $\mathcal{N}_i$ is the neighborhood of node $i$. The node representations are then updated using these attention weights:
+where $\mathbf{h}_i$ represents the features of node $i$, $W \in \mathbb{R}^{d_{out} \times d_{in}}$ is a learned transformation matrix, $\mathbf{a} \in \mathbb{R}^{2d_{out}}$ is a learned attention vector, and $\mathcal{N}_i$ denotes the neighborhood of node $i$. The node representations are updated using these attention weights:
 
 \begin{equation}
-    h'_i = \sigma\left(\sum_{j \in \mathcal{N}_i} \alpha_{ij} W h_j\right)
+    \mathbf{h}'_i = \sigma\left(\sum_{j \in \mathcal{N}_i} \alpha_{ij} W \mathbf{h}_j\right)
 \end{equation}
 
-The temporal aspect is handled through a window-based memory system that maintains a history of previous graph states. A multi-head attention mechanism operates across this temporal window:
+where $\sigma$ is a non-linear activation function (ReLU in our implementation).
+
+To capture different types of relationships between agents, the GNN employs multi-head attention with $K=4$ attention heads:
 
 \begin{equation}
-    \text{TemporalAttention}(X_t, X_{t-1:t-k}) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
+    \mathbf{h}'_i = [\mathbf{h}^1_i; \mathbf{h}^2_i; \ldots; \mathbf{h}^K_i], \quad \text{where} \quad \mathbf{h}^k_i = \sigma\left(\sum_{j \in \mathcal{N}_i} \alpha^k_{ij} W^k \mathbf{h}_j\right)
 \end{equation}
 
-where $X_t$ is the current graph representation, $X_{t-1:t-k}$ represents previous graph states, and $Q$, $K$, $V$ are learned projections. The GNN implementation uses configurable parameters for the number of graph layers (default: 2), attention heads (default: 4), and temporal window size (default: 5).
+where $[\cdot; \cdot]$ denotes concatenation and each head $k$ has its own parameters $W^k$ and $\mathbf{a}^k$. This allows the model to attend to different aspects of agent relationships simultaneously.
 
-The GNN receives a combination of the current latent estimate, the agent's observations, actions, and rewards. Formally, its input for agent $i$ is defined as $x_i = [\hat{\boldsymbol{z}}^{-i}_{t}, o^{i}_{t}, \boldsymbol{a}_{t}, r^{i}_{t}, o^{i}_{t+1}]$, where $\hat{\boldsymbol{z}}^{-i}_{t} \in \mathbb{R}^{d}$ represents the current estimate of other agents' latent states with dimension $d=256$ in our implementation.
-
-After processing through the graph layers and temporal attention mechanism, the GNN outputs parameters of a Gaussian distribution over the next latent state:
+A critical innovation in our Temporal GNN is the incorporation of temporal dependencies through a sliding window memory mechanism. The system maintains a buffer of previous graph representations over a temporal window of size $T=5$:
 
 \begin{equation}
-    \mu_{t} = W_{\mu}h^{\text{final}}_i + b_{\mu}
-\end{equation}
-\begin{equation}
-    \log\sigma_{t} = W_{\sigma}h^{\text{final}}_i + b_{\sigma}
+    \mathcal{M}_t = \{\mathbf{H}_{t-T+1}, \mathbf{H}_{t-T+2}, \ldots, \mathbf{H}_t\}
 \end{equation}
 
-where $\mu_{t}$ is the mean vector and $\log\sigma_{t}$ is the log-standard-deviation vector of the distribution, and $h^{\text{final}}_i$ is the final node representation for agent $i$.
-
-The GNN also outputs an opponent belief distribution through a separate head:
+where $\mathbf{H}_s$ represents the node features at time step $s$. Temporal attention is applied across this sequence using a standard transformer attention mechanism:
 
 \begin{equation}
-    p_{\text{opp}} = \text{softmax}(W_{\text{opp}}h^{\text{final}}_i + b_{\text{opp}})
+    \text{TemporalAttention}(\mathbf{Q}_t, \mathbf{K}_{t-T+1:t}, \mathbf{V}_{t-T+1:t}) = \text{softmax}\left(\frac{\mathbf{Q}_t\mathbf{K}_{t-T+1:t}^T}{\sqrt{d}}\right)\mathbf{V}_{t-T+1:t}
 \end{equation}
 
-This distribution represents the agent's prediction of other agents' beliefs about the environment state.
+This temporal attention mechanism enables the model to capture how agent behaviors evolve over time and identify patterns in their learning dynamics.
 
-The latent variables are sampled using the reparameterization trick to enable backpropagation:
+The Temporal GNN outputs parameters for a variational posterior distribution over latent states representing other agents' hidden characteristics:
+
+\begin{align}
+    \boldsymbol{\mu}_t &= W_{\mu}\mathbf{h}^{\text{final}}_i + \mathbf{b}_{\mu} \\
+    \log\boldsymbol{\sigma}_t &= W_{\sigma}\mathbf{h}^{\text{final}}_i + \mathbf{b}_{\sigma}
+\end{align}
+
+where $\mathbf{h}^{\text{final}}_i$ is the final node representation for agent $i$ after all GNN layers and temporal attention. The latent variables are sampled using the reparameterization trick:
 
 \begin{equation}
-    \hat{\boldsymbol{z}}^{-i}_{t+1} = \mu_{t} + \exp(0.5 \cdot \log\sigma_{t}) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+    \hat{\mathbf{z}}^{-i}_{t+1} = \boldsymbol{\mu}_t + \boldsymbol{\sigma}_t \odot \boldsymbol{\epsilon}, \quad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})
 \end{equation}
 
-The GNN-based inference module is trained using the Evidence Lower Bound (ELBO) objective function:
+\section{Policy and Value Networks}
+
+The policy networks map belief states and inferred latent variables to action decisions, implementing the agent's strategy for maximizing long-term rewards. For discrete action spaces, the policy network outputs categorical distributions:
+
+\begin{align}
+    \mathbf{h}^1 &= \text{ReLU}(W^1[\mathbf{b}^i_t; \hat{\mathbf{z}}^{-i}_t] + \mathbf{b}^1) \\
+    \mathbf{h}^2 &= \text{ReLU}(W^2\mathbf{h}^1 + \mathbf{b}^2) \\
+    \boldsymbol{\pi}^i(\cdot|\mathbf{b}^i_t, \hat{\mathbf{z}}^{-i}_t; \boldsymbol{\theta}^i) &= \text{softmax}(W^{\text{out}}\mathbf{h}^2 + \mathbf{b}^{\text{out}})
+\end{align}
+
+where $[\cdot; \cdot]$ denotes concatenation.
+
+POLARIS employs dual Q-networks~\cite{hasselt2016deep} to mitigate overestimation bias, a critical consideration in multi-agent settings where overconfident value estimates can lead to suboptimal strategic behaviors. For discrete actions, the Q-networks take belief states, latent variables, and one-hot encoded neighbor actions:
+
+\begin{align}
+    \mathbf{x}_q &= [\mathbf{b}^i_t; \hat{\mathbf{z}}^{-i}_t; \mathbf{a}^{\text{neighbors}}_{\text{onehot}}] \\
+    \mathbf{h}^1_q &= \text{ReLU}(W^1_q\mathbf{x}_q + \mathbf{b}^1_q) \\
+    \mathbf{h}^2_q &= \text{ReLU}(W^2_q\mathbf{h}^1_q + \mathbf{b}^2_q) \\
+    \mathbf{Q}^i &= W^{\text{out}}_q\mathbf{h}^2_q + \mathbf{b}^{\text{out}}_q
+\end{align}
+
+
+Target networks are maintained for stability, updated using exponential moving averages:
 
 \begin{equation}
-    J^{i}_{\text{elbo}} = \mathbb{E}[\log \mathbb{P}(\boldsymbol{a}^{-i}_{t}|o^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}) - \alpha_{\text{KL}}D_{\text{KL}}(\mathcal{N}(\hat{\boldsymbol{z}}^{-i}_{t+1}|\tau^i_t) || \mathcal{N}(\hat{\boldsymbol{z}}^{-i}_{t}))]
+    \boldsymbol{\theta}_{\text{target}} \leftarrow \tau \boldsymbol{\theta} + (1-\tau)\boldsymbol{\theta}_{\text{target}}
 \end{equation}
 
-where the first term represents the reconstruction log-likelihood and the second term is a KL divergence regularization that encourages temporal consistency in the latent space. The hyperparameter $\alpha_{\text{KL}}$ controls the strength of this regularization.
-
-
-\section{Reinforcement Learning Module}
-
-The reinforcement learning module optimizes the agent's policy based on beliefs, inferences about other agents, and received rewards. POLARIS implements a soft actor-critic (SAC)~\cite{haarnoja2018soft} framework that balances exploitation with exploration through entropy regularization.
-
-\subsection{Policy Network Architecture}
-
-The policy network translates belief states and inferred latent variables into action decisions. It represents the agent's strategy for maximizing long-term rewards in the social learning environment. The policy network takes the agent's belief state and the inferred latent variables of other agents as input: $x_{\pi} = [b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}]$.
-
-The policy is implemented as an MLP with ReLU activations across multiple hidden layers:
-
-\begin{equation}
-    h^1_{\pi} = \text{ReLU}(W^1_{\pi}x_{\pi} + b^1_{\pi})
-\end{equation}
-\begin{equation}
-    h^2_{\pi} = \text{ReLU}(W^2_{\pi}h^1_{\pi} + b^2_{\pi})
-\end{equation}
-
-Each hidden layer contains 256 units. For discrete action spaces, the policy outputs action probabilities:
-
-\begin{equation}
-    \pi^{i}(a^{i}|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = \text{softmax}(W_{\text{out}}h^2_{\pi} + b_{\text{out}})
-\end{equation}
-
-where $W_{\text{out}}$ and $b_{\text{out}}$ are part of the policy parameters $\theta^{i}$.
-
-For continuous action spaces, the policy outputs the mean and log standard deviation of a Gaussian distribution:
-
-\begin{equation}
-    \mu(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = W_{\mu}h^2_{\pi} + b_{\mu}
-\end{equation}
-\begin{equation}
-    \log\sigma(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}) = W_{\sigma}h^2_{\pi} + b_{\sigma}
-\end{equation}
-
-To sample actions for continuous spaces, we use the reparameterization trick, which enables gradient flow through the sampling process:
-
-\begin{equation}
-    a^i_{\text{raw}} = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
-\end{equation}
-
-A squashing function (tanh) is then applied to bound the actions within the range $[-1, 1]$:
-
-\begin{equation}
-    a^i = \tanh(a^i_{\text{raw}})
-\end{equation}
-
-This bounded action can be scaled to the appropriate range required by the environment. When using this squashing function, the log probability calculation must be adjusted using the change of variables formula:
-
-\begin{equation}
-    \log \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i) = \log \mathcal{N}(a^i_{\text{raw}}|\mu, \sigma) - \sum_{j} \log(1 - \tanh^2(a^i_{\text{raw},j}))
-\end{equation}
-
-where the second term is the logarithm of the absolute determinant of the Jacobian of the tanh transformation.
-
-Following the soft actor-critic framework, the policy is trained to maximize both expected returns and entropy:
-
-\begin{equation}
-    J^{i}_{\pi}(\theta^{i}) = \mathbb{E}[\min_{\beta=1,2}q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, a^{i}_{t}; \psi^{i}_{\beta}) + \alpha_e H(\pi^{i}(\cdot|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}))]
-\end{equation}
-
-where $\alpha_e$ is the entropy weight (temperature parameter) that controls the balance between exploitation and exploration. Higher values of $\alpha_e$ encourage more exploration.
-
-For discrete action spaces, the entropy is calculated directly from the action probabilities:
-\begin{equation}
-    H(\pi^{i}) = -\sum_{a^i} \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i) \log \pi^i(a^i|b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i)
-\end{equation}
-
-For continuous action spaces, the entropy of the base Gaussian distribution is used:
-\begin{equation}
-    H(\pi^{i}) = \frac{1}{2}\log\det(2\pi e \sigma^2(b^i_t, \hat{\boldsymbol{z}}^{-i}_t; \theta^i))
-\end{equation}
-
-When using the tanh squashing function, this entropy calculation must be adjusted to account for the change in probability density.
-
-\subsection{Value Network Architecture}
-
-The value network estimates the expected future rewards for state-action pairs, providing the foundation for policy optimization. POLARIS implements a dual critic approach to mitigate overestimation bias, a common issue in Q-learning algorithms.
-
-The value network receives the belief state, inferred latent variables, and joint action as input: $x_{q} = [b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}]$. Each value network follows an MLP architecture with three hidden layers:
-
-\begin{equation}
-    h^1_{q} = \text{ReLU}(W^1_{q}x_{q} + b^1_{q})
-\end{equation}
-\begin{equation}
-    h^2_{q} = \text{ReLU}(W^2_{q}h^1_{q} + b^2_{q})
-\end{equation}
-\begin{equation}
-    h^3_{q} = \text{ReLU}(W^3_{q}h^2_{q} + b^3_{q})
-\end{equation}
-
-Each hidden layer contains 256 units. The network outputs a scalar value estimate:
-
-\begin{equation}
-    q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}; \psi^{i}_{\beta}) = W_{q,\text{out}}h^3_{q} + b_{q,\text{out}}
-\end{equation}
-
-where $\beta \in \{1, 2\}$ indicates which of the two value networks is being used. The value function is trained using the soft Bellman equation, which incorporates the entropy-regularized objective:
-
-\begin{equation}
-    y = r^{i}_{t} - \rho^{i}_{\theta^i} + v^{i}_{\theta^i}(b^{i}_{t+1}, \hat{\boldsymbol{z}}^{-i}_{t+1}; \bar{\psi}^{i}_{\beta})
-\end{equation}
-\begin{equation}
-    J^{i}_{q}(\psi^{i}_{\beta}, \rho^{i}_{\theta^i}) = \mathbb{E}[(y - q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, \boldsymbol{a}_{t}; \psi^{i}_{\beta}))^{2}]
-\end{equation}
-
-where $\bar{\psi}^{i}_{\beta}$ are the target network parameters, updated using an exponential moving average:
-
-\begin{equation}
-    \bar{\psi}^{i}_{\beta} \leftarrow \tau_{q}\psi^{i}_{\beta} + (1 - \tau_{q})\bar{\psi}^{i}_{\beta}
-\end{equation}
-
-with $\tau_{q} = 0.005$ in our implementation. The term $\rho^{i}_{\theta^i}$ represents the average reward, which is used for differential returns in continuing tasks. The soft value function incorporates policy entropy:
-
-\begin{equation}
-    v^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}) = \mathbb{E}_{a^i \sim \pi^i(\cdot|b^i_t,\hat{\boldsymbol{z}}^{-i}_t;\theta^i)}[\min_{\beta=1,2}q^{i}_{\theta^i}(b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}, a^{i}_{t}; \psi^{i}_{\beta})] + \alpha_e H(\pi^{i}(\cdot|b^{i}_{t}, \hat{\boldsymbol{z}}^{-i}_{t}; \theta^{i}))
-\end{equation}
-
-POLARIS can operate in both discounted and average reward modes. In discounted mode, the target is simply $y = r^{i}_{t} + \gamma \cdot v^{i}_{\theta^i}(b^{i}_{t+1}, \hat{\boldsymbol{z}}^{-i}_{t+1}; \bar{\psi}^{i}_{\beta})$, where $\gamma$ is the discount factor. In average reward mode, the differential returns formulation with $\rho^{i}_{\theta^i}$ is used instead.
-
-The value network architecture directly implements our theoretical framework of active Markov games, estimating returns that account for the influence of current actions on future environmental states and the policy parameters of other agents.
-
-\section{Elastic Weight Consolidation}
-
-POLARIS implements Elastic Weight Consolidation (EWC)~\cite{kirkpatrick2017overcoming} to prevent catastrophic forgetting when agents need to maintain performance across multiple tasks or environments. EWC adds a regularization term to the loss function that penalizes large changes to parameters that were important for previously learned tasks.
-
-The EWC loss is defined as:
-
-\begin{equation}
-    \mathcal{L}_{\text{EWC}} = \lambda \sum_{i} F_i (\theta^i - {\theta^i}^*)^2
-\end{equation}
-
-where $\lambda$ is the importance factor, $F_i$ is the Fisher information for parameter $\theta^i$, and ${\theta^i}^*$ is the optimal parameter value for the previous task. The Fisher information matrix is calculated by:
-
-\begin{equation}
-    F = \mathbb{E}_{x \sim \mathcal{D}, y \sim \mathbb{P}(y|x; \theta)} \left[ \nabla_\theta \log \mathbb{P}(y|x; \theta) \nabla_\theta \log \mathbb{P}(y|x; \theta)^T \right]
-\end{equation}
-
-In practice, POLARIS approximates this using samples from the replay buffer. The implementation offers both standard EWC and online EWC variants. The online variant continuously updates the Fisher matrix with a decay factor, allowing for sequential learning across multiple tasks without storing separate Fisher matrices:
-
-\begin{equation}
-    F_{\text{new}} = \gamma F_{\text{old}} + F_{\text{current}}
-\end{equation}
-
-where $\gamma$ is a decay factor typically set to 0.95. EWC is particularly valuable in social learning contexts where agents may need to adapt to different partner policies without forgetting effective strategies learned previously.
-
-In practice, all these neural network components operate in tandem, with the belief state processor tracking the environmental state, the inference module predicting other agents' behavior, and the reinforcement learning module optimizing the agent's policy. This integrated approach enables POLARIS to effectively navigate the complexities of partially observable multi-agent environments with non-stationary dynamics.
-
-\section{Implementation Details}
-
-POLARIS incorporates several crucial implementation details that enhance its performance in social learning environments. Double Q-learning is employed to prevent overestimation bias, a common issue in value-based reinforcement learning methods. This approach maintains two separate Q-networks and uses the minimum of their predictions for target value calculations, providing a more pessimistic and reliable estimate of expected returns. Such conservative value estimation is particularly important in social learning, where overestimated values can lead to overly aggressive strategies that fail to account for the strategic adaptations of other agents.
-
-Temperature scaling is applied to softmax outputs in the belief distribution calculations, controlling the sharpness of the resulting probability distributions. This technique produces more stable belief distributions, preventing premature convergence to overly confident beliefs based on limited evidence. The temperature parameter can be adjusted to balance exploration and exploitation in the belief space, with higher values producing more uniform distributions that encourage consideration of alternative hypotheses about the environment state.
-
-For robust latent sampling from the variational posterior, POLARIS employs several numerical stability safeguards. These include clamping log-variances to prevent extreme values, enforcing minimum and maximum bounds on variances, and using epsilon terms to avoid division by zero or other numerical instabilities. These precautions are essential when working with variational methods in complex, high-dimensional spaces, ensuring reliable performance even with noisy or ambiguous social signals.
-
-Gradient clipping is applied across all network updates to prevent exploding gradients, a common issue in deep reinforcement learning, especially with recurrent or transformer architectures. By limiting the maximum gradient norm, POLARIS maintains stable training even when encountering unusual observations or reward patterns. Additionally, separate optimizers are maintained for each network component, allowing for different learning rates and optimization strategies tailored to the specific characteristics of each module.
-
-The POLARIS implementation significantly advances beyond the original FURTHER framework by introducing sophisticated belief modeling through Transformers, network-aware representations via GNNs, advantage-weighted Transformer training, and catastrophic forgetting prevention through EWC. These enhancements enable more effective learning in the complex, partially observable social environments that characterize our theoretical framework. By integrating these components into a cohesive algorithm, POLARIS provides a practical realization of the theoretical Partially Observable Active Markov Game framework, offering a powerful tool for studying social learning dynamics across various network topologies and environmental conditions.
+with $\tau = 0.005$ in our implementation.
 
 \chapter{Social Learning Implementation}
 
